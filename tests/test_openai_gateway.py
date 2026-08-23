@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from service_desk.ai.gateway import WorkflowRequest
-from service_desk.ai.openai_gateway import OpenAIModelGateway
+from service_desk.ai.openai_gateway import OpenAIModelGateway, route_decision_schema
 
 
 class FakeResponses:
@@ -31,6 +31,8 @@ def test_openai_gateway_parses_structured_route_without_network() -> None:
     assert decision.route == "billing"
     assert responses.calls[0]["store"] is False
     assert responses.calls[0]["text"] is not None
+    assert responses.calls[0]["input"] == [{"role": "user", "content": "Why was I billed?"}]
+    assert "input_items" not in responses.calls[0]
 
 
 def test_openai_gateway_reads_function_calls_from_a_scoped_response() -> None:
@@ -66,3 +68,12 @@ def test_openai_gateway_reads_function_calls_from_a_scoped_response() -> None:
     assert turn.tool_calls[0].name == "get_subscription"
     assert responses.calls[0]["tools"] == list(request.tools)
     assert responses.calls[0]["parallel_tool_calls"] is False
+    assert "input" in responses.calls[0]
+    assert "input_items" not in responses.calls[0]
+
+
+def test_route_schema_is_compatible_with_strict_structured_outputs() -> None:
+    schema = route_decision_schema()
+
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(schema["properties"])
