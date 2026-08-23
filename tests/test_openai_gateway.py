@@ -1,0 +1,68 @@
+from types import SimpleNamespace
+
+from service_desk.ai.gateway import WorkflowRequest
+from service_desk.ai.openai_gateway import OpenAIModelGateway
+
+
+class FakeResponses:
+    def __init__(self, response: object) -> None:
+        self.response = response
+        self.calls: list[dict[str, object]] = []
+
+    def create(self, **kwargs: object) -> object:
+        self.calls.append(kwargs)
+        return self.response
+
+
+def test_openai_gateway_parses_structured_route_without_network() -> None:
+    responses = FakeResponses(
+        SimpleNamespace(
+            output_text=(
+                '{"route":"billing","needs_clarification":false,'
+                '"rationale":"Payment question."}'
+            )
+        )
+    )
+    gateway = OpenAIModelGateway("test-key", "test-model")
+    gateway._client = SimpleNamespace(responses=responses)  # type: ignore[assignment]
+
+    decision = gateway.route("Why was I billed?")
+
+    assert decision.route == "billing"
+    assert responses.calls[0]["store"] is False
+    assert responses.calls[0]["text"] is not None
+
+
+def test_openai_gateway_reads_function_calls_from_a_scoped_response() -> None:
+    responses = FakeResponses(
+        SimpleNamespace(
+            output=[
+                SimpleNamespace(
+                    type="function_call", name="get_subscription", arguments="{}"
+                )
+            ],
+            output_text="",
+        )
+    )
+    gateway = OpenAIModelGateway("test-key", "test-model")
+    gateway._client = SimpleNamespace(responses=responses)  # type: ignore[assignment]
+    request = WorkflowRequest(
+        route="billing",
+        customer_id="cus_orbit_001",
+        message="Why was I billed?",
+        tools=(
+            {
+                "type": "function",
+                "name": "get_subscription",
+                "description": "Get subscription.",
+                "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+                "strict": True,
+            },
+        ),
+    )
+
+    turn = gateway.next_workflow_turn(request)
+
+    assert turn.tool_calls[0].name == "get_subscription"
+    assert responses.calls[0]["tools"] == list(request.tools)
+    assert responses.calls[0]["parallel_tool_calls"] is False
