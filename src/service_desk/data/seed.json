@@ -1,0 +1,122 @@
+{
+  "customers": [
+    {
+      "id": "cus_orbit_001",
+      "name": "Mara Lin",
+      "company": "Orbit & Pine",
+      "email": "mara.lin@orbit-pine.example"
+    },
+    {
+      "id": "cus_willow_002",
+      "name": "Evan Torres",
+      "company": "Willow Ledger",
+      "email": "evan.torres@willow-ledger.example"
+    },
+    {
+      "id": "cus_lumen_003",
+      "name": "Priya Shah",
+      "company": "Lumen Workshop",
+      "email": "priya.shah@lumen-workshop.example"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "sub_orbit_001",
+      "customer_id": "cus_orbit_001",
+      "plan": "Growth",
+      "status": "active",
+      "seats": 12,
+      "renewal_date": "2026-12-01",
+      "invoice_ids": ["inv_orbit_1001", "inv_orbit_1002"]
+    },
+    {
+      "id": "sub_willow_002",
+      "customer_id": "cus_willow_002",
+      "plan": "Starter",
+      "status": "past_due",
+      "seats": 3,
+      "renewal_date": "2026-10-15",
+      "invoice_ids": ["inv_willow_2001"]
+    },
+    {
+      "id": "sub_lumen_003",
+      "customer_id": "cus_lumen_003",
+      "plan": "Scale",
+      "status": "active",
+      "seats": 30,
+      "renewal_date": "2027-03-20",
+      "invoice_ids": ["inv_lumen_3001"]
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv_orbit_1001",
+      "customer_id": "cus_orbit_001",
+      "subscription_id": "sub_orbit_001",
+      "amount_cents": 14900,
+      "currency": "USD",
+      "status": "paid",
+      "issued_on": "2026-07-01",
+      "due_on": "2026-07-15"
+    },
+    {
+      "id": "inv_orbit_1002",
+      "customer_id": "cus_orbit_001",
+      "subscription_id": "sub_orbit_001",
+      "amount_cents": 14900,
+      "currency": "USD",
+      "status": "open",
+      "issued_on": "2026-08-01",
+      "due_on": "2026-08-15"
+    },
+    {
+      "id": "inv_willow_2001",
+      "customer_id": "cus_willow_002",
+      "subscription_id": "sub_willow_002",
+      "amount_cents": 3900,
+      "currency": "USD",
+      "status": "past_due",
+      "issued_on": "2026-08-01",
+      "due_on": "2026-08-15"
+    },
+    {
+      "id": "inv_lumen_3001",
+      "customer_id": "cus_lumen_003",
+      "subscription_id": "sub_lumen_003",
+      "amount_cents": 29900,
+      "currency": "USD",
+      "status": "paid",
+      "issued_on": "2026-08-01",
+      "due_on": "2026-08-15"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "tic_orbit_4001",
+      "customer_id": "cus_orbit_001",
+      "subject": "CSV export times out for large reports",
+      "category": "technical",
+      "status": "in_progress",
+      "priority": "high",
+      "updated_on": "2026-08-21"
+    },
+    {
+      "id": "tic_orbit_4002",
+      "customer_id": "cus_orbit_001",
+      "subject": "Question about adding workspace members",
+      "category": "support",
+      "status": "resolved",
+      "priority": "normal",
+      "updated_on": "2026-08-10"
+    },
+    {
+      "id": "tic_willow_5001",
+      "customer_id": "cus_willow_002",
+      "subject": "Cannot update payment card",
+      "category": "billing",
+      "status": "open",
+      "priority": "normal",
+      "updated_on": "2026-08-22"
+    }
+  ]
+}
