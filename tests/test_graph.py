@@ -55,3 +55,18 @@ def test_graph_rejects_a_tool_outside_the_selected_workflow_allowlist() -> None:
 
     with pytest.raises(Exception, match="outside the allowlist"):
         graph.invoke("cus_orbit_001", "The export is failing")
+
+
+class ExcessiveToolCallsGateway(FakeModelGateway):
+    def next_workflow_turn(self, request: WorkflowRequest) -> WorkflowTurn:
+        self.requests.append(request)
+        return WorkflowTurn(tool_calls=tuple(ToolCall(name="list_tickets") for _ in range(4)))
+
+
+def test_graph_enforces_a_total_tool_call_budget() -> None:
+    graph = ServiceDeskGraph(
+        BusinessTools(BusinessRepository.from_default_seed()), ExcessiveToolCallsGateway(route="support")
+    )
+
+    with pytest.raises(Exception, match="bounded tool-call budget"):
+        graph.invoke("cus_orbit_001", "Please help")

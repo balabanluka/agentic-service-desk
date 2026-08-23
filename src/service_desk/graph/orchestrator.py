@@ -10,6 +10,7 @@ from service_desk.graph.workflows.permissions import ScopedToolExecutor
 from service_desk.tools.business import BusinessTools
 
 MAX_WORKFLOW_TOOL_TURNS = 3
+MAX_WORKFLOW_TOOL_CALLS = 3
 
 
 class ServiceDeskGraph:
@@ -107,6 +108,7 @@ class ServiceDeskGraph:
         executor = ScopedToolExecutor(self._tools, state["customer_id"], route)  # type: ignore[arg-type]
         tool_results = list(state["tool_results"])
         tool_calls = list(state["tool_calls"])
+        remaining_tool_calls = MAX_WORKFLOW_TOOL_CALLS
         for _ in range(MAX_WORKFLOW_TOOL_TURNS):
             request = WorkflowRequest(
                 route=route,  # type: ignore[arg-type]
@@ -127,10 +129,13 @@ class ServiceDeskGraph:
                     answer=turn.answer,
                     answer_source="model",
                 )
+            if len(turn.tool_calls) > remaining_tool_calls:
+                raise ModelGatewayError("workflow exceeded its bounded tool-call budget")
             for tool_call in turn.tool_calls:
                 result, record = executor.execute(tool_call)
                 tool_results.append(result)
                 tool_calls.append(record)
+            remaining_tool_calls -= len(turn.tool_calls)
         raise ModelGatewayError("workflow exhausted its bounded tool-use loop")
 
     def _clarify(self, state: AgentState) -> dict[str, object]:
