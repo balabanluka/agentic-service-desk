@@ -11,6 +11,11 @@ Within its selected workflow, the model can choose from a strict, read-only
 allowlist of local business tools. The graph—not the model—controls routing,
 workflow boundaries, permissions, and the bounded tool-use loop.
 
+Each domain workflow is a terminal graph node: after its bounded tool-use loop,
+the model composes the final grounded answer within that workflow. V1
+intentionally has no separate `compose_answer` node. The clarification and
+missing-customer terminal nodes return safe template answers.
+
 The only business data is original synthetic local data. V1 has no write
 actions, RAG, vector database, MCP, Langfuse, frontend, Docker service, or
 external business-system integration.

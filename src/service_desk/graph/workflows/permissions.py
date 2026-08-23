@@ -1,6 +1,5 @@
 """Strict, per-domain read-only tool definitions and execution."""
 
-from collections.abc import Callable
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError

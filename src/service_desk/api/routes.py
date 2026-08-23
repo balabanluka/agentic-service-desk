@@ -23,7 +23,7 @@ def create_router(chat_service: ChatService) -> APIRouter:
     def chat(request: ChatRequest) -> ChatResponse | JSONResponse:
         try:
             result = chat_service.chat(request.customer_id, request.message)
-        except CustomerNotFoundError as exc:
+        except CustomerNotFoundError:
             return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,
                 content=ErrorResponse(
@@ -31,7 +31,7 @@ def create_router(chat_service: ChatService) -> APIRouter:
                 ).model_dump(),
                 headers={"X-Error-Code": "customer_not_found"},
             )
-        except ModelGatewayError as exc:
+        except ModelGatewayError:
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=ErrorResponse(

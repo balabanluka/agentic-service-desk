@@ -1,13 +1,14 @@
 from fastapi.testclient import TestClient
 
 from service_desk.ai.gateway import ModelGatewayError
+from service_desk.config import Settings
 from service_desk.data.repository import BusinessRepository
 from service_desk.main import create_app
 from tests.fakes import FakeModelGateway
 
 
 def test_health_is_available_without_an_openai_key() -> None:
-    response = TestClient(create_app()).get("/health")
+    response = TestClient(create_app(settings=Settings(_env_file=None))).get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
