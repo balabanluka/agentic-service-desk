@@ -35,8 +35,9 @@ uvicorn service_desk.main:app --reload
 ```
 
 Copy `.env.example` to a local `.env` and set an OpenAI key only when running
-the live application. The test suite injects an offline fake model gateway and
-never makes real OpenAI calls.
+the live application. V1 defaults to `gpt-5.6-luna`; override it with
+`OPENAI_MODEL` when needed. The test suite injects an offline fake model gateway
+and never makes real OpenAI calls.
 
 ## Roadmap
 
