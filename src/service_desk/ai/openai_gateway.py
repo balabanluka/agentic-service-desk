@@ -1,6 +1,7 @@
 """OpenAI Responses API implementation of the narrow model gateway."""
 
 import json
+import logging
 from typing import Any
 
 from openai import OpenAI
@@ -15,12 +16,24 @@ from service_desk.ai.gateway import (
     require_valid_route,
 )
 
+logger = logging.getLogger(__name__)
+
 
 ROUTER_INSTRUCTIONS = """You route customer-service messages for a fictional SaaS company.
 Choose exactly one of support, billing, or technical when the request is clear.
 Set needs_clarification to true and route to null when it is ambiguous or combines
 unrelated domains. diagnostic_confidence is optional diagnostic metadata only; do
-not use it as a threshold. Return JSON matching the supplied schema."""
+not use it as a threshold. Set diagnostic_confidence to null when it is unavailable.
+Return JSON matching the supplied schema."""
+
+
+def route_decision_schema() -> dict[str, object]:
+    """Make Pydantic's schema compatible with OpenAI strict Structured Outputs."""
+    schema = RouteDecision.model_json_schema()
+    properties = schema["properties"]
+    schema["required"] = list(properties)
+    schema["additionalProperties"] = False
+    return schema
 
 
 class OpenAIModelGateway:
@@ -32,20 +45,27 @@ class OpenAIModelGateway:
 
     def route(self, message: str) -> RouteDecision:
         response = self._create_response(
+            operation="routing",
             instructions=ROUTER_INSTRUCTIONS,
-            input_items=[{"role": "user", "content": message}],
+            input=[{"role": "user", "content": message}],
             text={
                 "format": {
                     "type": "json_schema",
                     "name": "route_decision",
                     "strict": True,
-                    "schema": RouteDecision.model_json_schema(),
+                    "schema": route_decision_schema(),
                 }
             },
         )
         try:
             return require_valid_route(RouteDecision.model_validate_json(response.output_text))
         except Exception as exc:  # JSON/model validation is an external boundary.
+            logger.warning(
+                "OpenAI routing response could not be validated [model=%s, error_type=%s, error=%s]",
+                self._model,
+                type(exc).__name__,
+                exc,
+            )
             raise ModelGatewayError("model returned an invalid route decision") from exc
 
     def next_workflow_turn(self, request: WorkflowRequest) -> WorkflowTurn:
@@ -66,8 +86,9 @@ class OpenAIModelGateway:
             }
         ]
         response = self._create_response(
+            operation=f"{request.route}_workflow",
             instructions=instructions,
-            input_items=input_items,
+            input=input_items,
             tools=list(request.tools),
         )
         tool_calls = tuple(
@@ -78,7 +99,7 @@ class OpenAIModelGateway:
         answer = response.output_text.strip() or None
         return WorkflowTurn(tool_calls=tool_calls, answer=answer)
 
-    def _create_response(self, **kwargs: Any) -> Any:
+    def _create_response(self, *, operation: str, **kwargs: Any) -> Any:
         try:
             return self._client.responses.create(
                 model=self._model,
@@ -87,4 +108,11 @@ class OpenAIModelGateway:
                 **kwargs,
             )
         except Exception as exc:  # SDK/network exceptions are mapped at the API boundary.
+            logger.exception(
+                "OpenAI Responses API request failed [operation=%s, model=%s, error_type=%s, error=%s]",
+                operation,
+                self._model,
+                type(exc).__name__,
+                exc,
+            )
             raise ModelGatewayError("OpenAI request failed") from exc
