@@ -73,7 +73,11 @@ class OpenAIModelGateway:
             f"You are the {request.route} workflow for a fictional SaaS company. "
             "Use only the tools supplied to you. You may request one or more tools, "
             "or give a concise final answer once the supplied tool results are enough. "
-            "Never claim to perform write actions. Do not invent business facts."
+            "Never claim to perform write actions. For factual Harborlight claims, use only "
+            "the supplied business-tool results and retrieved knowledge sources. Clearly "
+            "distinguish customer-specific facts from general knowledge-base guidance. If a "
+            "fact is not supported by those sources, say that it cannot be confirmed rather "
+            "than inventing a policy or account fact."
         )
         input_items: list[dict[str, Any]] = [
             {
@@ -81,7 +85,9 @@ class OpenAIModelGateway:
                 "content": (
                     f"Customer ID: {request.customer_id}\n"
                     f"Customer message: {request.message}\n"
-                    f"Previous tool results: {json.dumps([result.model_dump() for result in request.tool_results])}"
+                    f"Previous tool results: {json.dumps([result.model_dump() for result in request.tool_results])}\n"
+                    "Retrieved knowledge sources: "
+                    f"{json.dumps([source.model_dump() for source in request.knowledge_sources])}"
                 ),
             }
         ]

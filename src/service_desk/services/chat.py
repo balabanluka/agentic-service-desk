@@ -1,12 +1,19 @@
 """Application service that turns a graph state into API-safe output."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from service_desk.graph.orchestrator import ServiceDeskGraph
 
 
 class CustomerNotFoundError(ValueError):
     pass
+
+
+class KnowledgeSourceMetadata(BaseModel):
+    document_id: str
+    document_title: str
+    chunk_id: str
+    source_path: str
 
 
 class ExecutionMetadata(BaseModel):
@@ -16,6 +23,7 @@ class ExecutionMetadata(BaseModel):
     graph_path: list[str]
     answer_source: str
     diagnostic_confidence: float | None = None
+    knowledge_sources: list[KnowledgeSourceMetadata] = Field(default_factory=list)
 
 
 class ChatResult(BaseModel):
@@ -40,5 +48,6 @@ class ChatService:
                 graph_path=state["transitions"],
                 answer_source=state["answer_source"],
                 diagnostic_confidence=state.get("diagnostic_confidence"),
+                knowledge_sources=state.get("knowledge_sources", []),
             ),
         )

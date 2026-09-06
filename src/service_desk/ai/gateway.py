@@ -29,6 +29,16 @@ class ToolResult(BaseModel):
     content: dict[str, object]
 
 
+class KnowledgeSource(BaseModel):
+    """Retrieved knowledge context available to one controlled workflow."""
+
+    document_id: str
+    document_title: str
+    chunk_id: str
+    source_path: str
+    content: str
+
+
 class WorkflowTurn(BaseModel):
     """The next bounded action selected by the model inside one workflow."""
 
@@ -42,6 +52,7 @@ class WorkflowRequest(BaseModel):
     customer_id: str
     tools: tuple[dict[str, object], ...]
     tool_results: tuple[ToolResult, ...] = ()
+    knowledge_sources: tuple[KnowledgeSource, ...] = ()
 
 
 class ModelGatewayError(RuntimeError):

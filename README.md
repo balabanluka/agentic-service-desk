@@ -48,8 +48,9 @@ and never makes real OpenAI calls.
 
 V2 currently provides frozen synthetic knowledge documents, deterministic
 chunking, local PostgreSQL/pgvector persistence primitives, and explicit
-idempotent ingestion with exact cosine retrieval. It does not generate RAG
-answers or connect retrieval to the V1 LangGraph workflows.
+idempotent ingestion, exact cosine retrieval, and route-scoped grounded RAG
+context for the V1 workflows. It does not add autonomous agents, write actions,
+or automatic knowledge ingestion.
 
 Copy `.env.example` to a local `.env`, choose a local PostgreSQL password, then
 start only the database service and apply the versioned schema migration:
@@ -83,8 +84,15 @@ Retrieval searches active chunks for the configured embedding model with exact
 pgvector cosine ranking. Its cosine similarity is a ranking signal, **not** a
 calibrated confidence score or answer-quality guarantee.
 
+When configured with both an OpenAI key and `DATABASE_URL`, the V1 graph
+retrieves a small, fixed-domain context for its selected support, billing, or
+technical workflow. The model cannot choose the retrieval domain. Final
+workflow answers receive both that context and the existing scoped business
+tool results; API execution metadata exposes only concise source identifiers,
+never retrieved vectors or full chunks.
+
 ## Roadmap
 
-- **V2 next:** authenticated customer context and grounded RAG answer generation.
+- **V2 next:** authenticated customer context and retrieval/grounding evaluation.
 - **V3:** MCP integrations, human approval for sensitive/write actions, and
   richer evaluation and observability.

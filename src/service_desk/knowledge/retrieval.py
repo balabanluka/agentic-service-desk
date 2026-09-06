@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from service_desk.knowledge.embeddings import EmbeddingClient
 from service_desk.knowledge.repository import (
@@ -19,6 +20,15 @@ MAX_TOP_K = 10
 
 class KnowledgeRetrievalError(ValueError):
     """Raised when a retrieval request is invalid or an embedding response is unsafe."""
+
+
+class KnowledgeSearchProvider(Protocol):
+    """Dependency-injected retrieval boundary used by controlled workflows."""
+
+    def search(
+        self, query: str, *, domain: str | None = None, top_k: int | None = None
+    ) -> tuple["KnowledgeSearchResult", ...]:
+        """Return domain-filtered knowledge results for one query."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,6 +145,43 @@ class KnowledgeRetriever:
             _search_result(match, rank=index)
             for index, match in enumerate(matches, start=1)
         )
+
+
+class DatabaseKnowledgeRetriever:
+    """Lazy production adapter that opens a database connection only for a search."""
+
+    def __init__(
+        self,
+        *,
+        database_url: str,
+        embedding_client: EmbeddingClient,
+        embedding_model: str,
+        embedding_dimensions: int,
+        corpus_version: str,
+        default_top_k: int = 4,
+    ) -> None:
+        self._database_url = database_url
+        self._embedding_client = embedding_client
+        self._embedding_model = embedding_model
+        self._embedding_dimensions = embedding_dimensions
+        self._corpus_version = corpus_version
+        self._default_top_k = default_top_k
+
+    def search(
+        self, query: str, *, domain: str | None = None, top_k: int | None = None
+    ) -> tuple[KnowledgeSearchResult, ...]:
+        repository = KnowledgeRepository.connect(self._database_url)
+        try:
+            return KnowledgeRetriever(
+                repository=repository,
+                embedding_client=self._embedding_client,
+                embedding_model=self._embedding_model,
+                embedding_dimensions=self._embedding_dimensions,
+                corpus_version=self._corpus_version,
+                default_top_k=self._default_top_k,
+            ).search(query, domain=domain, top_k=top_k)
+        finally:
+            repository.close()
 
 
 def _validate_top_k(top_k: int) -> None:
