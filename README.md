@@ -17,8 +17,8 @@ intentionally has no separate `compose_answer` node. The clarification and
 missing-customer terminal nodes return safe template answers.
 
 The only business data is original synthetic local data. V1 has no write
-actions, RAG, vector database, MCP, Langfuse, frontend, Docker service, or
-external business-system integration.
+actions, RAG answer generation, MCP, Langfuse, frontend, or external
+business-system integration.
 
 ### API
 
@@ -44,9 +44,27 @@ the live application. V1 defaults to `gpt-5.6-luna`; override it with
 `OPENAI_MODEL` when needed. The test suite injects an offline fake model gateway
 and never makes real OpenAI calls.
 
+## V2 knowledge database infrastructure
+
+V2 currently provides frozen synthetic knowledge documents, deterministic
+chunking, and local PostgreSQL/pgvector persistence primitives. It does not yet
+create embeddings, ingest documents, retrieve chunks, or generate RAG answers.
+
+Copy `.env.example` to a local `.env`, choose a local PostgreSQL password, then
+start only the database service and apply the versioned schema migration:
+
+```bash
+docker compose up -d postgres
+python -m service_desk.knowledge.migrate
+```
+
+PostgreSQL is bound to `127.0.0.1` only and stores its data in the named Docker
+volume `agentic_service_desk_postgres_data`. Keep `.env`, Docker volumes, and
+generated data out of version control.
+
 ## Roadmap
 
-- **V2:** retrieval-augmented knowledge access and authenticated customer
-  context.
+- **V2 next:** OpenAI embeddings, idempotent ingestion, exact pgvector
+  retrieval, then authenticated customer context.
 - **V3:** MCP integrations, human approval for sensitive/write actions, and
   richer evaluation and observability.
