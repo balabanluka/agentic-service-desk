@@ -8,6 +8,7 @@ import pytest
 
 from service_desk.knowledge import KnowledgeBaseChunker
 from service_desk.knowledge.repository import EmbeddingRecord, KnowledgeRepository, VECTOR_DIMENSIONS
+from service_desk.knowledge import repository as repository_module
 
 
 class RecordingCursor:
@@ -78,6 +79,25 @@ def test_repository_reads_existing_fingerprints_without_an_embedding_client() ->
         "kb-v1",
         "text-embedding-3-small",
     )
+
+
+def test_repository_connection_uses_autocommit_for_explicit_write_boundaries(monkeypatch) -> None:
+    connection = RecordingConnection()
+    connect_calls: list[tuple[str, dict[str, object]]] = []
+
+    def fake_connect(database_url: str, **kwargs: object) -> RecordingConnection:
+        connect_calls.append((database_url, kwargs))
+        return connection
+
+    monkeypatch.setattr(repository_module.psycopg, "connect", fake_connect)
+    monkeypatch.setattr(repository_module, "register_vector", lambda _: None)
+
+    repository = KnowledgeRepository.connect("postgresql://example.invalid/service_desk")
+
+    assert repository._connection is connection
+    assert connect_calls == [
+        ("postgresql://example.invalid/service_desk", {"autocommit": True})
+    ]
 
 
 def test_repository_upserts_chunks_and_refuses_empty_retirement() -> None:
