@@ -58,7 +58,10 @@ class KnowledgeRepository:
 
     @classmethod
     def connect(cls, database_url: str) -> Self:
-        connection = psycopg.connect(database_url)
+        # Reads performed before an explicit ingestion transaction must not leave an
+        # implicit outer transaction open. In autocommit mode, ``transaction()``
+        # below always creates the real commit/rollback boundary for a write unit.
+        connection = psycopg.connect(database_url, autocommit=True)
         register_vector(connection)
         return cls(connection)
 

@@ -28,6 +28,9 @@ dev = [
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+markers = [
+    "postgres: opt-in local PostgreSQL integration test; set RUN_POSTGRES_TESTS=1",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/service_desk"]
