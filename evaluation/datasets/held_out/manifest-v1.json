@@ -1,0 +1,10 @@
+{
+  "manifest_version": "v1",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "files": {
+    "retrieval-v1.json": "b2224f88be1f7a0a4bf222f23e01e85b0aa7892f727e07d2897420a9d338311d",
+    "workflow-v1.json": "54f9591478cdb6e37e76a9287ab72030be59362879d58288308b419422656469"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "dataset_id": "retrieval-development-v1",
+  "dataset_version": "v1",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "cases": [
+    {
+      "case_id": "dev-ret-billing-invoice-status",
+      "query": "What does a past-due invoice mean and what happens next?",
+      "expected_domain": "billing",
+      "expected_document_ids": ["KB-BIL-001"],
+      "acceptable_chunk_ids": ["KB-BIL-001--chunk-v1--001", "KB-BIL-001--chunk-v1--002"]
+    },
+    {
+      "case_id": "dev-ret-support-member-invite",
+      "query": "Who can invite someone to a workspace?",
+      "expected_domain": "support",
+      "expected_document_ids": ["KB-SUP-001", "KB-SUP-005"]
+    },
+    {
+      "case_id": "dev-ret-technical-csv-timeout",
+      "query": "Why can a large CSV export time out?",
+      "expected_domain": "technical",
+      "expected_document_ids": ["KB-TEC-003"]
+    }
+  ]
+}
