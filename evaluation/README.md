@@ -1,0 +1,14 @@
+# V2 Evaluation Data
+
+This directory contains original synthetic evaluation data for the frozen
+Harborlight Cloud knowledge corpus. Development datasets may guide implementation
+work. Held-out datasets are frozen benchmarks: do not change their cases after
+observing their results. The manifest records SHA-256 fingerprints of normalized
+UTF-8 held-out JSON content and is verified by the evaluation CLI.
+
+The datasets evaluate retrieval ranking and deterministic workflow contracts.
+They do not claim that string matching can prove answer-level factual accuracy.
+The explicit live workflow mode records answers for human review; it is never run
+by pytest and requires a manual confirmation flag because it uses OpenAI APIs.
+
+Generated reports belong in `evaluation/reports/`, which is intentionally ignored.

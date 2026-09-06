@@ -1,0 +1,45 @@
+{
+  "dataset_id": "retrieval-held-out-v1",
+  "dataset_version": "v1",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "cases": [
+    {
+      "case_id": "hold-ret-billing-payment-retry",
+      "query": "My card payment failed. What should I check before trying again?",
+      "expected_domain": "billing",
+      "expected_document_ids": ["KB-BIL-002"]
+    },
+    {
+      "case_id": "hold-ret-billing-seat-charge",
+      "query": "When do added workspace seats begin appearing on an invoice?",
+      "expected_domain": "billing",
+      "expected_document_ids": ["KB-BIL-006"]
+    },
+    {
+      "case_id": "hold-ret-support-access",
+      "query": "A colleague cannot sign in after being invited. What access checks should we make?",
+      "expected_domain": "support",
+      "expected_document_ids": ["KB-SUP-002"]
+    },
+    {
+      "case_id": "hold-ret-support-priority",
+      "query": "How do P1 through P4 map to ticket priority and status?",
+      "expected_domain": "support",
+      "expected_document_ids": ["KB-SUP-006"]
+    },
+    {
+      "case_id": "hold-ret-technical-webhook",
+      "query": "How should we verify and retry a webhook delivery?",
+      "expected_domain": "technical",
+      "expected_document_ids": ["KB-TEC-004"]
+    },
+    {
+      "case_id": "hold-ret-technical-auth",
+      "query": "Which API authentication mistakes commonly cause a 401 response?",
+      "expected_domain": "technical",
+      "expected_document_ids": ["KB-TEC-001", "KB-TEC-005"]
+    }
+  ]
+}

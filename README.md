@@ -91,8 +91,24 @@ workflow answers receive both that context and the existing scoped business
 tool results; API execution metadata exposes only concise source identifiers,
 never retrieved vectors or full chunks.
 
+## V2 evaluation
+
+Original synthetic development and frozen held-out evaluation data live under
+`evaluation/datasets/`. The held-out manifest records SHA-256 fingerprints and
+the CLI rejects changed held-out data. Validate datasets or run deterministic
+workflow-contract checks without any OpenAI call:
+
+```bash
+python -m service_desk.evaluation.run validate
+python -m service_desk.evaluation.run workflow-offline --split held_out
+```
+
+Live retrieval and live RAG modes are manual only and require `--confirm-live`.
+They use the configured OpenAI APIs, can incur charges, and should write their
+JSON reports to an ignored path such as `evaluation/reports/`.
+
 ## Roadmap
 
-- **V2 next:** authenticated customer context and retrieval/grounding evaluation.
+- **V2 next:** authenticated customer context and expanded retrieval/grounding evaluation.
 - **V3:** MCP integrations, human approval for sensitive/write actions, and
   richer evaluation and observability.

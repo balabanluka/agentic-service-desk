@@ -1,0 +1,42 @@
+{
+  "dataset_id": "workflow-development-v1",
+  "dataset_version": "v1",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "cases": [
+    {
+      "case_id": "dev-rag-support-members",
+      "customer_id": "cus_orbit_001",
+      "message": "We need to add a teammate. Who can invite them and is there already a related ticket?",
+      "expected_route": "support",
+      "needs_clarification": false,
+      "planned_tool_calls": [{"name": "list_tickets", "arguments": {}}],
+      "required_tools": ["list_tickets"],
+      "allowed_tools": ["get_customer", "list_tickets"],
+      "expected_knowledge_document_ids": ["KB-SUP-001", "KB-SUP-005"]
+    },
+    {
+      "case_id": "dev-rag-technical-csv",
+      "customer_id": "cus_orbit_001",
+      "message": "Our CSV export times out. Is there an existing ticket and what general troubleshooting applies?",
+      "expected_route": "technical",
+      "needs_clarification": false,
+      "planned_tool_calls": [{"name": "list_tickets", "arguments": {}}],
+      "required_tools": ["list_tickets"],
+      "allowed_tools": ["get_customer", "get_subscription", "list_tickets"],
+      "expected_knowledge_document_ids": ["KB-TEC-003", "KB-TEC-006"]
+    },
+    {
+      "case_id": "dev-rag-clarification",
+      "customer_id": "cus_orbit_001",
+      "message": "Can you help with my account?",
+      "expected_route": "clarification",
+      "needs_clarification": true,
+      "planned_tool_calls": [],
+      "required_tools": [],
+      "allowed_tools": [],
+      "expected_knowledge_document_ids": []
+    }
+  ]
+}
