@@ -115,6 +115,51 @@ def test_repository_upserts_chunks_and_refuses_empty_retirement() -> None:
     assert "is_active = false" in connection.cursor_instance.calls[0][0]
 
 
+def test_repository_runs_exact_active_model_scoped_cosine_search() -> None:
+    vector = [0.0] * VECTOR_DIMENSIONS
+    vector[0] = 1.0
+    connection = RecordingConnection(
+        [
+            {
+                "chunk_id": "KB-TEC-003--chunk-v1--001",
+                "chunking_version": "v1",
+                "corpus_version": "kb-v1",
+                "document_id": "KB-TEC-003",
+                "document_title": "CSV Export Limits",
+                "domain": "technical",
+                "product": "Harborlight Cloud",
+                "heading_path": ["CSV Export Limits", "Timeouts"],
+                "included_heading_paths": [["CSV Export Limits", "Timeouts"]],
+                "chunk_index": 1,
+                "source_path": "knowledge/technical/csv-export-limits.md",
+                "content": "Synthetic chunk content.",
+                "word_count": 3,
+                "content_sha256": "c" * 64,
+                "source_commit": "d" * 40,
+                "cosine_distance": 0.25,
+            }
+        ]
+    )
+    repository = KnowledgeRepository(connection)  # type: ignore[arg-type]
+
+    results = repository.search_active_chunks(
+        corpus_version="kb-v1",
+        embedding_model="text-embedding-3-small",
+        query_embedding=vector,
+        domain="technical",
+        top_k=4,
+    )
+
+    query, parameters = connection.cursor_instance.calls[0]
+    assert "ke.embedding <=> query_vector.embedding" in query
+    assert "kc.is_active = true" in query
+    assert "ke.embedding_model = %s" in query
+    assert "kc.domain = %s" in query
+    assert tuple(parameters[1:]) == ("kb-v1", "text-embedding-3-small", "technical", 4)
+    assert results[0].heading_path == ("CSV Export Limits", "Timeouts")
+    assert results[0].cosine_distance == 0.25
+
+
 def test_embedding_records_validate_dimensions_and_unique_keys() -> None:
     vector = tuple(0.0 for _ in range(VECTOR_DIMENSIONS))
     record = EmbeddingRecord(

@@ -48,7 +48,8 @@ and never makes real OpenAI calls.
 
 V2 currently provides frozen synthetic knowledge documents, deterministic
 chunking, local PostgreSQL/pgvector persistence primitives, and explicit
-idempotent ingestion. It does not yet retrieve chunks or generate RAG answers.
+idempotent ingestion with exact cosine retrieval. It does not generate RAG
+answers or connect retrieval to the V1 LangGraph workflows.
 
 Copy `.env.example` to a local `.env`, choose a local PostgreSQL password, then
 start only the database service and apply the versioned schema migration:
@@ -71,8 +72,19 @@ python -m service_desk.knowledge.ingest
 This command is never run automatically by FastAPI or pytest. It embeds only
 new or changed chunk content and prints a metadata-only ingestion report.
 
+To explicitly retrieve passages, use the same configured embedding model and
+database:
+
+```bash
+python -m service_desk.knowledge.search "Why do CSV exports time out for large reports?" --domain technical
+```
+
+Retrieval searches active chunks for the configured embedding model with exact
+pgvector cosine ranking. Its cosine similarity is a ranking signal, **not** a
+calibrated confidence score or answer-quality guarantee.
+
 ## Roadmap
 
-- **V2 next:** exact pgvector retrieval, then authenticated customer context.
+- **V2 next:** authenticated customer context and grounded RAG answer generation.
 - **V3:** MCP integrations, human approval for sensitive/write actions, and
   richer evaluation and observability.

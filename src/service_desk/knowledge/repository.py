@@ -50,6 +50,28 @@ class EmbeddingRecord:
             raise ValueError("embedding length does not match embedding_dimensions")
 
 
+@dataclass(frozen=True, slots=True)
+class RetrievedKnowledgeChunk:
+    """One active chunk returned by exact pgvector cosine search."""
+
+    chunk_id: str
+    chunking_version: str
+    corpus_version: str
+    document_id: str
+    document_title: str
+    domain: str
+    product: str
+    heading_path: tuple[str, ...]
+    included_heading_paths: tuple[tuple[str, ...], ...]
+    chunk_index: int
+    source_path: str
+    content: str
+    word_count: int
+    content_sha256: str
+    source_commit: str
+    cosine_distance: float
+
+
 class KnowledgeRepository:
     """Database operations for chunk and embedding lifecycle management only."""
 
@@ -112,6 +134,39 @@ class KnowledgeRepository:
                 )
                 for row in cursor.fetchall()
             }
+
+    def search_active_chunks(
+        self,
+        *,
+        corpus_version: str,
+        embedding_model: str,
+        query_embedding: Sequence[float],
+        domain: str | None,
+        top_k: int,
+    ) -> tuple[RetrievedKnowledgeChunk, ...]:
+        """Run exact cosine ranking against active chunks for one embedding model."""
+
+        if not corpus_version:
+            raise ValueError("corpus_version must not be empty")
+        if not embedding_model:
+            raise ValueError("embedding_model must not be empty")
+        if len(query_embedding) != VECTOR_DIMENSIONS:
+            raise ValueError("query embedding length does not match pgvector dimensions")
+        if not 1 <= top_k <= 10:
+            raise ValueError("top_k must be between 1 and 10")
+
+        domain_clause = ""
+        parameters: list[object] = [list(query_embedding), corpus_version, embedding_model]
+        if domain is not None:
+            domain_clause = " AND kc.domain = %s"
+            parameters.append(domain)
+        parameters.append(top_k)
+
+        with self._connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                _SEARCH_ACTIVE_CHUNKS_SQL.format(domain_clause=domain_clause), parameters
+            )
+            return tuple(_retrieved_chunk_from_row(row) for row in cursor.fetchall())
 
     def upsert_chunks(self, chunks: Sequence[KnowledgeChunk]) -> int:
         """Insert or refresh current chunks without changing unchanged rows."""
@@ -225,6 +280,37 @@ WHERE
     OR existing.is_active IS DISTINCT FROM true
 """
 
+_SEARCH_ACTIVE_CHUNKS_SQL = """
+WITH query_vector AS (SELECT %s::vector AS embedding)
+SELECT
+    kc.chunk_id,
+    kc.chunking_version,
+    kc.corpus_version,
+    kc.document_id,
+    kc.document_title,
+    kc.domain,
+    kc.product,
+    kc.heading_path,
+    kc.included_heading_paths,
+    kc.chunk_index,
+    kc.source_path,
+    kc.content,
+    kc.word_count,
+    kc.content_sha256,
+    kc.source_commit,
+    ke.embedding <=> query_vector.embedding AS cosine_distance
+FROM knowledge_embeddings AS ke
+JOIN knowledge_chunks AS kc
+    ON kc.corpus_version = ke.corpus_version
+    AND kc.chunk_id = ke.chunk_id
+CROSS JOIN query_vector
+WHERE kc.corpus_version = %s
+  AND kc.is_active = true
+  AND ke.embedding_model = %s{domain_clause}
+ORDER BY cosine_distance ASC, kc.chunk_id ASC
+LIMIT %s
+"""
+
 _UPSERT_EMBEDDING_SQL = """
 INSERT INTO knowledge_embeddings AS existing (
     corpus_version, chunk_id, embedding_model, embedding_dimensions,
@@ -255,3 +341,26 @@ def _ensure_unique_embedding_keys(embeddings: Sequence[EmbeddingRecord]) -> None
     ]
     if len(keys) != len(set(keys)):
         raise ValueError("embeddings must have unique corpus, chunk, and model keys")
+
+
+def _retrieved_chunk_from_row(row: dict[str, object]) -> RetrievedKnowledgeChunk:
+    return RetrievedKnowledgeChunk(
+        chunk_id=str(row["chunk_id"]),
+        chunking_version=str(row["chunking_version"]),
+        corpus_version=str(row["corpus_version"]),
+        document_id=str(row["document_id"]),
+        document_title=str(row["document_title"]),
+        domain=str(row["domain"]),
+        product=str(row["product"]),
+        heading_path=tuple(str(value) for value in row["heading_path"]),
+        included_heading_paths=tuple(
+            tuple(str(value) for value in path) for path in row["included_heading_paths"]
+        ),
+        chunk_index=int(row["chunk_index"]),
+        source_path=str(row["source_path"]),
+        content=str(row["content"]),
+        word_count=int(row["word_count"]),
+        content_sha256=str(row["content_sha256"]),
+        source_commit=str(row["source_commit"]),
+        cosine_distance=float(row["cosine_distance"]),
+    )
