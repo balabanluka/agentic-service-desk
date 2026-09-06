@@ -15,7 +15,12 @@ from service_desk.knowledge.repository import (
     RetrievedKnowledgeChunk,
 )
 from service_desk.knowledge.ingestion import IngestionReport, KnowledgeIngestor
-from service_desk.knowledge.retrieval import KnowledgeRetriever, KnowledgeSearchResult
+from service_desk.knowledge.retrieval import (
+    DatabaseKnowledgeRetriever,
+    KnowledgeRetriever,
+    KnowledgeSearchProvider,
+    KnowledgeSearchResult,
+)
 
 __all__ = [
     "CHUNKING_VERSION",
@@ -31,5 +36,7 @@ __all__ = [
     "IngestionReport",
     "KnowledgeIngestor",
     "KnowledgeRetriever",
+    "DatabaseKnowledgeRetriever",
+    "KnowledgeSearchProvider",
     "KnowledgeSearchResult",
 ]

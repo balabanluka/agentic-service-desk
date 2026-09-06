@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from service_desk.ai.gateway import WorkflowRequest
+from service_desk.ai.gateway import KnowledgeSource, WorkflowRequest
 from service_desk.ai.openai_gateway import OpenAIModelGateway, route_decision_schema
 
 
@@ -61,6 +61,15 @@ def test_openai_gateway_reads_function_calls_from_a_scoped_response() -> None:
                 "strict": True,
             },
         ),
+        knowledge_sources=(
+            KnowledgeSource(
+                document_id="KB-BIL-001",
+                document_title="Billing cycles",
+                chunk_id="KB-BIL-001--chunk-v1--001",
+                source_path="knowledge/billing/billing-cycles.md",
+                content="Synthetic billing guidance.",
+            ),
+        ),
     )
 
     turn = gateway.next_workflow_turn(request)
@@ -70,6 +79,7 @@ def test_openai_gateway_reads_function_calls_from_a_scoped_response() -> None:
     assert responses.calls[0]["parallel_tool_calls"] is False
     assert "input" in responses.calls[0]
     assert "input_items" not in responses.calls[0]
+    assert "Synthetic billing guidance." in responses.calls[0]["input"][0]["content"]
 
 
 def test_route_schema_is_compatible_with_strict_structured_outputs() -> None:
