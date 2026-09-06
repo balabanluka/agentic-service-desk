@@ -47,8 +47,8 @@ and never makes real OpenAI calls.
 ## V2 knowledge database infrastructure
 
 V2 currently provides frozen synthetic knowledge documents, deterministic
-chunking, and local PostgreSQL/pgvector persistence primitives. It does not yet
-create embeddings, ingest documents, retrieve chunks, or generate RAG answers.
+chunking, local PostgreSQL/pgvector persistence primitives, and explicit
+idempotent ingestion. It does not yet retrieve chunks or generate RAG answers.
 
 Copy `.env.example` to a local `.env`, choose a local PostgreSQL password, then
 start only the database service and apply the versioned schema migration:
@@ -62,9 +62,17 @@ PostgreSQL is bound to `127.0.0.1` only and stores its data in the named Docker
 volume `agentic_service_desk_postgres_data`. Keep `.env`, Docker volumes, and
 generated data out of version control.
 
+When intentionally ready to make a live OpenAI embeddings call, run:
+
+```bash
+python -m service_desk.knowledge.ingest
+```
+
+This command is never run automatically by FastAPI or pytest. It embeds only
+new or changed chunk content and prints a metadata-only ingestion report.
+
 ## Roadmap
 
-- **V2 next:** OpenAI embeddings, idempotent ingestion, exact pgvector
-  retrieval, then authenticated customer context.
+- **V2 next:** exact pgvector retrieval, then authenticated customer context.
 - **V3:** MCP integrations, human approval for sensitive/write actions, and
   richer evaluation and observability.

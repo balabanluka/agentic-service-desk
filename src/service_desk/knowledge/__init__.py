@@ -10,6 +10,7 @@ from service_desk.knowledge.chunking import (
     KnowledgeDocumentError,
 )
 from service_desk.knowledge.repository import EmbeddingRecord, KnowledgeRepository
+from service_desk.knowledge.ingestion import IngestionReport, KnowledgeIngestor
 
 __all__ = [
     "CHUNKING_VERSION",
@@ -21,4 +22,6 @@ __all__ = [
     "KnowledgeDocumentError",
     "EmbeddingRecord",
     "KnowledgeRepository",
+    "IngestionReport",
+    "KnowledgeIngestor",
 ]
