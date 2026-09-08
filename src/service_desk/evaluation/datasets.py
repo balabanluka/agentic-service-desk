@@ -23,11 +23,13 @@ def load_workflow_dataset(path: Path) -> WorkflowDataset:
     return WorkflowDataset.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def verify_held_out_manifest(directory: Path) -> HeldOutManifest:
+def verify_held_out_manifest(
+    directory: Path, *, manifest_filename: str = "manifest-v1.json"
+) -> HeldOutManifest:
     """Reject changed held-out data before an evaluation can report its metrics."""
 
     manifest = HeldOutManifest.model_validate_json(
-        (directory / "manifest-v1.json").read_text(encoding="utf-8")
+        (directory / manifest_filename).read_text(encoding="utf-8")
     )
     for filename, expected_fingerprint in manifest.files.items():
         actual_fingerprint = file_fingerprint(directory / filename)
@@ -37,3 +39,15 @@ def verify_held_out_manifest(directory: Path) -> HeldOutManifest:
                 f"expected {expected_fingerprint}, got {actual_fingerprint}"
             )
     return manifest
+
+
+def verify_all_held_out_manifests(directory: Path) -> dict[str, HeldOutManifest]:
+    """Verify every versioned held-out manifest without changing benchmark data."""
+
+    manifest_paths = sorted(directory.glob("manifest-v*.json"), key=lambda path: path.name)
+    if not manifest_paths:
+        raise ValueError(f"no held-out manifests found in {directory}")
+    return {
+        path.name: verify_held_out_manifest(directory, manifest_filename=path.name)
+        for path in manifest_paths
+    }
