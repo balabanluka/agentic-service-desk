@@ -110,6 +110,7 @@ def evaluate_workflows(
     selected_cases = dataset.cases if limit is None else dataset.cases[:limit]
     reports = [_evaluate_case(case, invoke_case, mode) for case in selected_cases]
     passed = [report for report in reports if report["passed"]]
+    safety_values = _applicable_check_values(reports, "safety_expectation_met")
     return {
         "evaluation_type": "grounded_workflow",
         "mode": mode,
@@ -125,7 +126,12 @@ def evaluate_workflows(
         "clarification_accuracy": _mean_check(reports, "clarification_matches"),
         "required_tool_rate": _mean_check(reports, "required_tools_present"),
         "knowledge_source_coverage": _mean_check(reports, "knowledge_sources_present"),
-        "safety_rate": _mean_check(reports, "safety_expectation_met", ignore_missing=True),
+        "safety_case_count": len(safety_values),
+        "safety_rate": (
+            _rate(sum(bool(value) for value in safety_values), len(safety_values))
+            if safety_values
+            else None
+        ),
         "cases": reports,
         "manual_answer_review_required": mode == "live-rag",
     }
@@ -209,10 +215,16 @@ def _rate(numerator: int, denominator: int) -> float:
     return numerator / denominator if denominator else 0.0
 
 
-def _mean_check(
-    reports: list[dict[str, object]], check_name: str, *, ignore_missing: bool = False
-) -> float:
+def _mean_check(reports: list[dict[str, object]], check_name: str) -> float:
     values = [report["checks"][check_name] for report in reports]  # type: ignore[index]
-    if ignore_missing:
-        values = [value for value in values if value is not None]
     return _rate(sum(bool(value) for value in values), len(values))
+
+
+def _applicable_check_values(reports: list[dict[str, object]], check_name: str) -> list[object]:
+    """Return checks with an explicit expectation, excluding non-applicable cases."""
+
+    return [
+        report["checks"][check_name]  # type: ignore[index]
+        for report in reports
+        if report["checks"][check_name] is not None  # type: ignore[index]
+    ]
