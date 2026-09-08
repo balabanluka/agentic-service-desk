@@ -14,6 +14,7 @@ from service_desk.evaluation.datasets import (
     file_fingerprint,
     load_retrieval_dataset,
     load_workflow_dataset,
+    verify_all_held_out_manifests,
     verify_held_out_manifest,
 )
 from service_desk.evaluation.retrieval import evaluate_retrieval
@@ -31,6 +32,7 @@ def main() -> None:
         choices=("validate", "workflow-offline", "retrieval-live", "workflow-live"),
     )
     parser.add_argument("--split", choices=("development", "held_out"), default="development")
+    parser.add_argument("--workflow-version", choices=("v1", "v2"), default="v1")
     parser.add_argument("--top-k", type=int, default=None)
     parser.add_argument(
         "--limit",
@@ -53,8 +55,10 @@ def main() -> None:
     if arguments.mode == "validate":
         report = _validation_report(datasets_root)
     elif arguments.mode == "workflow-offline":
-        workflow_path = datasets_root / arguments.split / "workflow-v1.json"
-        _verify_held_out_if_needed(datasets_root, arguments.split)
+        workflow_path = _workflow_dataset_path(
+            datasets_root, arguments.split, arguments.workflow_version
+        )
+        _verify_held_out_if_needed(datasets_root, arguments.split, arguments.workflow_version)
         report = run_offline_workflow_evaluation(
             load_workflow_dataset(workflow_path),
             dataset_path_fingerprint=file_fingerprint(workflow_path),
@@ -76,8 +80,10 @@ def main() -> None:
         report["api_usage"] = "OpenAI embeddings were called once per retrieval case."
     else:
         _require_live_confirmation(arguments.confirm_live)
-        workflow_path = datasets_root / arguments.split / "workflow-v1.json"
-        _verify_held_out_if_needed(datasets_root, arguments.split)
+        workflow_path = _workflow_dataset_path(
+            datasets_root, arguments.split, arguments.workflow_version
+        )
+        _verify_held_out_if_needed(datasets_root, arguments.split, arguments.workflow_version)
         settings = _live_settings()
         dataset = load_workflow_dataset(workflow_path)
         _validate_workflow_live_selection(arguments.limit, arguments.start_at, len(dataset.cases))
@@ -105,13 +111,17 @@ def main() -> None:
 
 
 def _validation_report(datasets_root: Path) -> dict[str, object]:
-    manifest = verify_held_out_manifest(datasets_root / "held_out")
+    manifests = verify_all_held_out_manifests(datasets_root / "held_out")
+    manifest = manifests["manifest-v1.json"]
     files = {
-        split: {
-            filename: file_fingerprint(datasets_root / split / filename)
+        "development": {
+            filename: file_fingerprint(datasets_root / "development" / filename)
             for filename in ("retrieval-v1.json", "workflow-v1.json")
-        }
-        for split in ("development", "held_out")
+        },
+        "held_out": {
+            filename: file_fingerprint(datasets_root / "held_out" / filename)
+            for filename in ("retrieval-v1.json", "workflow-v1.json", "workflow-v2.json")
+        },
     }
     return {
         "evaluation_type": "dataset_validation",
@@ -119,13 +129,27 @@ def _validation_report(datasets_root: Path) -> dict[str, object]:
         "corpus_version": manifest.corpus_version,
         "chunking_version": manifest.chunking_version,
         "embedding_model": manifest.embedding_model,
+        "held_out_manifests": {
+            filename: {"manifest_version": item.manifest_version, "files": item.files}
+            for filename, item in manifests.items()
+        },
         "dataset_fingerprints": files,
     }
 
 
-def _verify_held_out_if_needed(datasets_root: Path, split: str) -> None:
+def _verify_held_out_if_needed(
+    datasets_root: Path, split: str, workflow_version: str = "v1"
+) -> None:
     if split == "held_out":
-        verify_held_out_manifest(datasets_root / "held_out")
+        verify_held_out_manifest(
+            datasets_root / "held_out", manifest_filename=f"manifest-{workflow_version}.json"
+        )
+
+
+def _workflow_dataset_path(datasets_root: Path, split: str, workflow_version: str) -> Path:
+    if workflow_version == "v2" and split != "held_out":
+        raise SystemExit("workflow-v2 is available only as the frozen held-out dataset")
+    return datasets_root / split / f"workflow-{workflow_version}.json"
 
 
 def _live_settings() -> Settings:

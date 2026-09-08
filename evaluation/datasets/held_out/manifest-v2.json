@@ -1,0 +1,9 @@
+{
+  "manifest_version": "v2",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "files": {
+    "workflow-v2.json": "5e40087d2786628485d29e9eb976343bf934d9aca94685bf9d9f5e7dd7fb3e9e"
+  }
+}

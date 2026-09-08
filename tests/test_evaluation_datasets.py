@@ -7,6 +7,7 @@ import pytest
 from service_desk.evaluation.datasets import (
     load_retrieval_dataset,
     load_workflow_dataset,
+    verify_all_held_out_manifests,
     verify_held_out_manifest,
 )
 
@@ -21,17 +22,21 @@ def test_frozen_evaluation_dataset_sizes_and_metadata() -> None:
     held_out_retrieval = load_retrieval_dataset(root / "held_out" / "retrieval-v1.json")
     development_workflow = load_workflow_dataset(root / "development" / "workflow-v1.json")
     held_out_workflow = load_workflow_dataset(root / "held_out" / "workflow-v1.json")
+    held_out_workflow_v2 = load_workflow_dataset(root / "held_out" / "workflow-v2.json")
 
     assert len(development_retrieval.cases) == 3
     assert len(held_out_retrieval.cases) == 6
     assert len(development_workflow.cases) == 3
     assert len(held_out_workflow.cases) == 6
+    assert len(held_out_workflow_v2.cases) == 6
     assert {dataset.corpus_version for dataset in (development_retrieval, held_out_retrieval)} == {
         "kb-v1"
     }
     assert {dataset.chunking_version for dataset in (development_workflow, held_out_workflow)} == {
         "v1"
     }
+    assert held_out_workflow_v2.dataset_id == "workflow-held-out-v2"
+    assert held_out_workflow_v2.dataset_version == "v2"
 
 
 def test_held_out_manifest_matches_exact_frozen_dataset_bytes() -> None:
@@ -52,3 +57,11 @@ def test_held_out_manifest_rejects_changed_data(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="fingerprint mismatch"):
         verify_held_out_manifest(tmp_path)
+
+
+def test_v2_manifest_freezes_only_the_new_workflow_dataset() -> None:
+    manifests = verify_all_held_out_manifests(_datasets_root() / "held_out")
+
+    assert manifests["manifest-v2.json"].files == {
+        "workflow-v2.json": "5e40087d2786628485d29e9eb976343bf934d9aca94685bf9d9f5e7dd7fb3e9e"
+    }
