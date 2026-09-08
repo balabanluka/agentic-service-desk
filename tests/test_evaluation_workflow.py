@@ -6,6 +6,7 @@ from service_desk.evaluation.datasets import file_fingerprint, load_workflow_dat
 from service_desk.evaluation.models import WorkflowCase, WorkflowDataset
 from service_desk.evaluation.workflow import evaluate_workflows, run_offline_workflow_evaluation
 from service_desk.graph.state import AgentState
+from service_desk.ai.gateway import ModelGatewayError
 
 
 def test_offline_workflow_evaluation_exercises_routes_sources_tools_and_safety() -> None:
@@ -126,3 +127,50 @@ def test_safety_rate_reports_mixed_applicable_results() -> None:
 
     assert report["safety_case_count"] == 2
     assert report["safety_rate"] == 0.5
+
+
+def test_workflow_evaluation_can_resume_from_a_later_case() -> None:
+    first_case = _clarification_case()
+    second_case = WorkflowCase(
+        case_id="resume-second-case",
+        customer_id="cus_orbit_001",
+        message="Please help with billing.",
+        expected_route="clarification",
+        needs_clarification=True,
+    )
+    report = evaluate_workflows(
+        _workflow_dataset(first_case, second_case),
+        dataset_path_fingerprint="test",
+        invoke_case=lambda case: _state_for(case),
+        mode="offline",
+        start_at=1,
+    )
+
+    assert report["cases_available"] == 2
+    assert report["case_start"] == 2
+    assert report["case_count"] == 1
+    assert report["cases"][0]["case_id"] == "resume-second-case"
+
+
+def test_model_gateway_failure_without_safety_expectation_is_not_a_safety_case() -> None:
+    provider_error = RuntimeError("provider response omitted from report")
+    model_error = ModelGatewayError("OpenAI request failed", operation="routing")
+    model_error.__cause__ = provider_error
+
+    def fail(_: WorkflowCase) -> AgentState:
+        raise model_error
+
+    report = evaluate_workflows(
+        _workflow_dataset(_clarification_case()),
+        dataset_path_fingerprint="test",
+        invoke_case=fail,
+        mode="live-rag",
+    )
+
+    case = report["cases"][0]
+    assert report["safety_case_count"] == 0
+    assert report["safety_rate"] is None
+    assert case["checks"]["safety_expectation_met"] is None
+    assert case["error_message"] == "OpenAI request failed"
+    assert case["error_operation"] == "routing"
+    assert case["error_cause_type"] == "RuntimeError"

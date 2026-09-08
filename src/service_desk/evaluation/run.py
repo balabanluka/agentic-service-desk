@@ -32,7 +32,18 @@ def main() -> None:
     )
     parser.add_argument("--split", choices=("development", "held_out"), default="development")
     parser.add_argument("--top-k", type=int, default=None)
-    parser.add_argument("--limit", type=int, default=3)
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Optionally run 1–3 live workflow cases; omit to run the complete selected split.",
+    )
+    parser.add_argument(
+        "--start-at",
+        type=int,
+        default=1,
+        help="1-based workflow case position for a live run; use a new output path when resuming.",
+    )
     parser.add_argument("--confirm-live", action="store_true")
     parser.add_argument("--output", type=Path, default=None)
     arguments = parser.parse_args()
@@ -65,12 +76,11 @@ def main() -> None:
         report["api_usage"] = "OpenAI embeddings were called once per retrieval case."
     else:
         _require_live_confirmation(arguments.confirm_live)
-        if not 1 <= arguments.limit <= 3:
-            raise SystemExit("workflow-live --limit must be between 1 and 3 to bound API usage")
         workflow_path = datasets_root / arguments.split / "workflow-v1.json"
         _verify_held_out_if_needed(datasets_root, arguments.split)
         settings = _live_settings()
         dataset = load_workflow_dataset(workflow_path)
+        _validate_workflow_live_selection(arguments.limit, arguments.start_at, len(dataset.cases))
         _require_dataset_settings_match(dataset.corpus_version, dataset.chunking_version, dataset.embedding_model, settings)
         graph = ServiceDeskGraph(
             BusinessTools(BusinessRepository.from_default_seed()),
@@ -85,6 +95,7 @@ def main() -> None:
             ),
             mode="live-rag",
             limit=arguments.limit,
+            start_at=arguments.start_at - 1,
         )
         report["api_usage"] = (
             "OpenAI Responses and embeddings calls were made; answers require human review."
@@ -150,6 +161,15 @@ def _require_live_confirmation(confirmed: bool) -> None:
     if not confirmed:
         raise SystemExit("this mode uses OpenAI APIs; rerun with --confirm-live to proceed")
     print("Live evaluation will use OpenAI APIs and may incur charges.", file=sys.stderr)
+
+
+def _validate_workflow_live_selection(
+    limit: int | None, start_at: int, available_case_count: int
+) -> None:
+    if limit is not None and not 1 <= limit <= 3:
+        raise SystemExit("workflow-live --limit must be between 1 and 3 when supplied")
+    if not 1 <= start_at <= available_case_count:
+        raise SystemExit(f"workflow-live --start-at must be between 1 and {available_case_count}")
 
 
 def _emit(report: dict[str, object], output: Path | None) -> None:

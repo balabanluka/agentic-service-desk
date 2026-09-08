@@ -22,3 +22,14 @@ def test_live_cli_requires_explicit_confirmation_before_loading_settings(monkeyp
 
     with pytest.raises(SystemExit, match="confirm-live"):
         run.main()
+
+
+def test_workflow_live_selection_allows_full_or_bounded_resume_runs() -> None:
+    run._validate_workflow_live_selection(None, 1, 6)
+    run._validate_workflow_live_selection(1, 4, 6)
+    run._validate_workflow_live_selection(3, 4, 6)
+
+    with pytest.raises(SystemExit, match="when supplied"):
+        run._validate_workflow_live_selection(4, 1, 6)
+    with pytest.raises(SystemExit, match="start-at"):
+        run._validate_workflow_live_selection(None, 7, 6)
