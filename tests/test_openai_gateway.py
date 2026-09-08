@@ -82,6 +82,23 @@ def test_openai_gateway_reads_function_calls_from_a_scoped_response() -> None:
     assert "Synthetic billing guidance." in responses.calls[0]["input"][0]["content"]
 
 
+def test_openai_gateway_sends_an_empty_tool_list_for_answer_only_synthesis() -> None:
+    responses = FakeResponses(SimpleNamespace(output=[], output_text="Grounded final answer."))
+    gateway = OpenAIModelGateway("test-key", "test-model")
+    gateway._client = SimpleNamespace(responses=responses)  # type: ignore[assignment]
+    request = WorkflowRequest(
+        route="billing",
+        customer_id="cus_willow_002",
+        message="Why is the invoice past due?",
+        tools=(),
+    )
+
+    turn = gateway.next_workflow_turn(request)
+
+    assert turn.answer == "Grounded final answer."
+    assert responses.calls[0]["tools"] == []
+
+
 def test_route_schema_is_compatible_with_strict_structured_outputs() -> None:
     schema = route_decision_schema()
 

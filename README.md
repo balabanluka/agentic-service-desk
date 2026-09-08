@@ -12,7 +12,9 @@ allowlist of local business tools. The graph—not the model—controls routing,
 workflow boundaries, permissions, and the bounded tool-use loop.
 
 Each domain workflow is a terminal graph node: after its bounded tool-use loop,
-the model composes the final grounded answer within that workflow. V1
+the model composes the final grounded answer within that workflow. If the
+three-call tool budget is consumed, one final answer-only model turn composes
+from the collected evidence without exposing any business tools. V1
 intentionally has no separate `compose_answer` node. The clarification and
 missing-customer terminal nodes return safe template answers.
 

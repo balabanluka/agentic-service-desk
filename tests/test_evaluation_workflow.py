@@ -6,7 +6,8 @@ from service_desk.evaluation.datasets import file_fingerprint, load_workflow_dat
 from service_desk.evaluation.models import WorkflowCase, WorkflowDataset
 from service_desk.evaluation.workflow import evaluate_workflows, run_offline_workflow_evaluation
 from service_desk.graph.state import AgentState
-from service_desk.ai.gateway import ModelGatewayError
+from service_desk.ai.gateway import ModelGatewayError, ToolResult
+from service_desk.graph.orchestrator import WorkflowBoundedError
 
 
 def test_offline_workflow_evaluation_exercises_routes_sources_tools_and_safety() -> None:
@@ -174,3 +175,39 @@ def test_model_gateway_failure_without_safety_expectation_is_not_a_safety_case()
     assert case["error_message"] == "OpenAI request failed"
     assert case["error_operation"] == "routing"
     assert case["error_cause_type"] == "RuntimeError"
+
+
+def test_evaluation_reports_safe_partial_trace_for_bounded_workflow_failure() -> None:
+    bounded_error = WorkflowBoundedError(
+        route="billing",
+        tool_calls=[{"name": "get_subscription", "status": "success"}],
+        tool_results=[
+            ToolResult(
+                name="get_subscription",
+                status="success",
+                content={"invoice_ids": ["not-in-report"]},
+            )
+        ],
+        reason="answer_only_turn_requested_tool",
+        attempted_tool_names=("get_invoice",),
+    )
+
+    def fail(_: WorkflowCase) -> AgentState:
+        raise bounded_error
+
+    report = evaluate_workflows(
+        _workflow_dataset(_clarification_case()),
+        dataset_path_fingerprint="test",
+        invoke_case=fail,
+        mode="live-rag",
+    )
+
+    diagnostics = report["cases"][0]["workflow_diagnostics"]
+    assert diagnostics == {
+        "selected_route": "billing",
+        "partial_workflow_tool_calls": [{"name": "get_subscription", "status": "success"}],
+        "tool_result_statuses": [{"name": "get_subscription", "status": "success"}],
+        "exhaustion_reason": "answer_only_turn_requested_tool",
+        "attempted_tool_names": ["get_invoice"],
+    }
+    assert "not-in-report" not in str(diagnostics)

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from service_desk.ai.gateway import ModelGatewayError, RouteDecision, ToolCall, WorkflowRequest, WorkflowTurn
 from service_desk.data.repository import BusinessRepository
 from service_desk.evaluation.models import ToolFactExpectation, WorkflowCase, WorkflowDataset
-from service_desk.graph.orchestrator import ServiceDeskGraph
+from service_desk.graph.orchestrator import ServiceDeskGraph, WorkflowBoundedError
 from service_desk.graph.state import AgentState
 from service_desk.knowledge.retrieval import KnowledgeSearchResult
 from service_desk.tools.business import BusinessTools
@@ -172,6 +172,9 @@ def _evaluate_case(
             "error_message": str(error),
             "error_operation": error.operation,
             "error_cause_type": _error_cause_type(error),
+            "workflow_diagnostics": (
+                error.diagnostics if isinstance(error, WorkflowBoundedError) else None
+            ),
             "answer": None,
         }
 

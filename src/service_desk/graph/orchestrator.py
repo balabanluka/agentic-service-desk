@@ -9,6 +9,8 @@ from service_desk.ai.gateway import (
     KnowledgeSource,
     ModelGateway,
     ModelGatewayError,
+    RouteName,
+    ToolResult,
     WorkflowRequest,
     ensure_final_turn,
 )
@@ -21,6 +23,30 @@ MAX_WORKFLOW_TOOL_TURNS = 3
 MAX_WORKFLOW_TOOL_CALLS = 3
 
 logger = logging.getLogger(__name__)
+
+
+class WorkflowBoundedError(ModelGatewayError):
+    """A safe diagnostic for a workflow blocked by its bounded execution rules."""
+
+    def __init__(
+        self,
+        *,
+        route: RouteName,
+        tool_calls: list[dict[str, str]],
+        tool_results: list[ToolResult],
+        reason: str,
+        attempted_tool_names: tuple[str, ...] = (),
+    ) -> None:
+        super().__init__(f"bounded workflow failed: {reason}")
+        self.diagnostics = {
+            "selected_route": route,
+            "partial_workflow_tool_calls": [dict(record) for record in tool_calls],
+            "tool_result_statuses": [
+                {"name": result.name, "status": result.status} for result in tool_results
+            ],
+            "exhaustion_reason": reason,
+            "attempted_tool_names": list(attempted_tool_names),
+        }
 
 
 class ServiceDeskGraph:
@@ -121,15 +147,16 @@ class ServiceDeskGraph:
     def _run_technical(self, state: AgentState) -> dict[str, object]:
         return self._run_workflow(state, "technical", "technical_workflow")
 
-    def _run_workflow(self, state: AgentState, route: str, node: str) -> dict[str, object]:
-        executor = ScopedToolExecutor(self._tools, state["customer_id"], route)  # type: ignore[arg-type]
+    def _run_workflow(self, state: AgentState, route: RouteName, node: str) -> dict[str, object]:
+        executor = ScopedToolExecutor(self._tools, state["customer_id"], route)
         tool_results = list(state["tool_results"])
-        tool_calls = list(state["tool_calls"])
+        initial_tool_calls = list(state["tool_calls"])
+        workflow_tool_calls: list[dict[str, str]] = []
         knowledge_sources = self._retrieve_knowledge(state["message"], route)
         remaining_tool_calls = MAX_WORKFLOW_TOOL_CALLS
-        for _ in range(MAX_WORKFLOW_TOOL_TURNS):
+        for tool_turn_index in range(MAX_WORKFLOW_TOOL_TURNS):
             request = WorkflowRequest(
-                route=route,  # type: ignore[arg-type]
+                route=route,
                 message=state["message"],
                 customer_id=state["customer_id"],
                 tools=executor.definitions,
@@ -143,20 +170,83 @@ class ServiceDeskGraph:
                 return self._updated(
                     state,
                     node,
-                    tool_calls=tool_calls,
+                    tool_calls=[*initial_tool_calls, *workflow_tool_calls],
                     tool_results=tool_results,
                     knowledge_sources=[_source_record(source) for source in knowledge_sources],
                     answer=turn.answer,
                     answer_source="model",
-                )
+            )
             if len(turn.tool_calls) > remaining_tool_calls:
-                raise ModelGatewayError("workflow exceeded its bounded tool-call budget")
+                raise WorkflowBoundedError(
+                    route=route,
+                    tool_calls=workflow_tool_calls,
+                    tool_results=tool_results,
+                    reason="tool_call_budget_exceeded",
+                    attempted_tool_names=tuple(tool_call.name for tool_call in turn.tool_calls),
+                )
             for tool_call in turn.tool_calls:
                 result, record = executor.execute(tool_call)
                 tool_results.append(result)
-                tool_calls.append(record)
+                workflow_tool_calls.append(record)
             remaining_tool_calls -= len(turn.tool_calls)
-        raise ModelGatewayError("workflow exhausted its bounded tool-use loop")
+            if remaining_tool_calls == 0 or tool_turn_index == MAX_WORKFLOW_TOOL_TURNS - 1:
+                return self._run_final_synthesis(
+                    state=state,
+                    route=route,
+                    node=node,
+                    initial_tool_calls=initial_tool_calls,
+                    workflow_tool_calls=workflow_tool_calls,
+                    tool_results=tool_results,
+                    knowledge_sources=knowledge_sources,
+                )
+        raise AssertionError("workflow tool-use loop must return or synthesize")
+
+    def _run_final_synthesis(
+        self,
+        *,
+        state: AgentState,
+        route: RouteName,
+        node: str,
+        initial_tool_calls: list[dict[str, str]],
+        workflow_tool_calls: list[dict[str, str]],
+        tool_results: list[ToolResult],
+        knowledge_sources: tuple[KnowledgeSource, ...],
+    ) -> dict[str, object]:
+        """Give the model one tools-empty turn to answer from the bounded evidence."""
+
+        request = WorkflowRequest(
+            route=route,
+            message=state["message"],
+            customer_id=state["customer_id"],
+            tools=(),
+            tool_results=tuple(tool_results),
+            knowledge_sources=knowledge_sources,
+        )
+        final_turn = self._model_gateway.next_workflow_turn(request)
+        if final_turn.tool_calls:
+            raise WorkflowBoundedError(
+                route=route,
+                tool_calls=workflow_tool_calls,
+                tool_results=tool_results,
+                reason="answer_only_turn_requested_tool",
+                attempted_tool_names=tuple(tool_call.name for tool_call in final_turn.tool_calls),
+            )
+        if not final_turn.answer:
+            raise WorkflowBoundedError(
+                route=route,
+                tool_calls=workflow_tool_calls,
+                tool_results=tool_results,
+                reason="answer_only_turn_missing_answer",
+            )
+        return self._updated(
+            state,
+            node,
+            tool_calls=[*initial_tool_calls, *workflow_tool_calls],
+            tool_results=tool_results,
+            knowledge_sources=[_source_record(source) for source in knowledge_sources],
+            answer=final_turn.answer,
+            answer_source="model",
+        )
 
     def _retrieve_knowledge(self, message: str, route: str) -> tuple[KnowledgeSource, ...]:
         """Retrieve route-scoped context without letting the model choose a domain."""
