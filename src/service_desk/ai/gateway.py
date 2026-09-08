@@ -58,6 +58,10 @@ class WorkflowRequest(BaseModel):
 class ModelGatewayError(RuntimeError):
     """Raised when a model response cannot safely drive the graph."""
 
+    def __init__(self, message: str, *, operation: str | None = None) -> None:
+        super().__init__(message)
+        self.operation = operation
+
 
 class ModelGateway(Protocol):
     def route(self, message: str) -> RouteDecision:

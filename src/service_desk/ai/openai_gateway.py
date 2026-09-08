@@ -66,7 +66,9 @@ class OpenAIModelGateway:
                 type(exc).__name__,
                 exc,
             )
-            raise ModelGatewayError("model returned an invalid route decision") from exc
+            raise ModelGatewayError(
+                "model returned an invalid route decision", operation="routing"
+            ) from exc
 
     def next_workflow_turn(self, request: WorkflowRequest) -> WorkflowTurn:
         instructions = (
@@ -121,4 +123,4 @@ class OpenAIModelGateway:
                 type(exc).__name__,
                 exc,
             )
-            raise ModelGatewayError("OpenAI request failed") from exc
+            raise ModelGatewayError("OpenAI request failed", operation=operation) from exc
