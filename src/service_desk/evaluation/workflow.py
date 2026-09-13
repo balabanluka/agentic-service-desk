@@ -224,6 +224,7 @@ def _router_diagnostics(state: dict[str, object]) -> dict[str, object]:
         "needs_clarification": state.get("needs_clarification"),
         "diagnostic_confidence": state.get("diagnostic_confidence"),
         "rationale_summary": state.get("route_rationale"),
+        "write_intents": state.get("write_intents", []),
     }
 
 

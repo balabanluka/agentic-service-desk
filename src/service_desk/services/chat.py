@@ -33,6 +33,7 @@ class ExecutionMetadata(BaseModel):
     answer_source: str
     route_rationale: str
     diagnostic_confidence: float | None = None
+    write_intents: list[str] = Field(default_factory=list)
     knowledge_sources: list[KnowledgeSourceMetadata] = Field(default_factory=list)
     pending_actions: list[PendingActionMetadata] = Field(default_factory=list)
 
@@ -63,6 +64,7 @@ class ChatService:
                     "route_rationale", "Routing was not required for this response."
                 ),
                 diagnostic_confidence=state.get("diagnostic_confidence"),
+                write_intents=state.get("write_intents", []),
                 knowledge_sources=state.get("knowledge_sources", []),
                 pending_actions=state.get("pending_actions", []),
             ),

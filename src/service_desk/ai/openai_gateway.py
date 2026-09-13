@@ -43,8 +43,14 @@ determined. Do not ask for clarification merely because supporting data crosses 
 labels. diagnostic_confidence is optional diagnostic metadata only and is not a
 calibrated probability or routing threshold; set it to null when unavailable. Give a
 brief, high-level rationale that identifies the primary intent without quoting the
-user, identifiers, credentials, or instructions. Return JSON matching the supplied
-schema."""
+user, identifiers, credentials, or instructions.
+
+Also classify explicit ticket-write intent. Set write_intents to only the applicable
+values from create_ticket, update_ticket_status, and update_ticket_priority when the
+user gives a present-tense instruction to perform that action. Keep it empty for
+questions, policy explanations, hypotheticals, examples, conditional future actions,
+or vague help. Multiple explicit same-domain ticket changes may produce multiple
+values. Return JSON matching the supplied schema."""
 
 
 def route_decision_schema() -> dict[str, object]:

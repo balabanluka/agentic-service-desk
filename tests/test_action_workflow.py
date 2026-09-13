@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from service_desk.ai.gateway import ToolCall, WorkflowRequest, WorkflowTurn
+from service_desk.ai.gateway import RouteDecision, ToolCall, WorkflowRequest, WorkflowTurn
 from service_desk.data.repository import BusinessRepository
 from service_desk.graph.orchestrator import ServiceDeskGraph
 from service_desk.graph.workflows.permissions import (
@@ -37,6 +37,15 @@ class FakeActionService:
 
 
 class CreateTicketGateway(FakeModelGateway):
+    def route(self, message: str) -> RouteDecision:
+        del message
+        return RouteDecision(
+            route="technical",
+            needs_clarification=False,
+            rationale="Explicit technical ticket creation request.",
+            write_intents=("create_ticket",),
+        )
+
     def next_workflow_turn(self, request: WorkflowRequest) -> WorkflowTurn:
         self.requests.append(request)
         if not request.tool_results:
@@ -86,6 +95,7 @@ def test_action_tools_are_explicitly_classified_and_scoped() -> None:
         "support",
         action_service=actions,  # type: ignore[arg-type]
         request_id="request-1",
+        write_intents=("create_ticket", "update_ticket_status", "update_ticket_priority"),
     )
 
     assert set(ACTION_PROPOSAL_TOOLS).issubset(executor.allowed_names)
@@ -111,3 +121,31 @@ def test_answer_only_synthesis_never_receives_action_tools() -> None:
     ).invoke("cus_orbit_001", "Tell me about my account")
 
     assert gateway.requests[-1].tools == ()
+
+
+def test_informational_request_has_no_action_tool_surface() -> None:
+    actions = FakeActionService()
+    executor = ScopedToolExecutor(
+        BusinessTools(BusinessRepository.from_default_seed()),
+        "cus_orbit_001",
+        "support",
+        action_service=actions,  # type: ignore[arg-type]
+        request_id="request-info",
+        write_intents=(),
+    )
+
+    assert not set(ACTION_PROPOSAL_TOOLS).intersection(executor.allowed_names)
+
+
+def test_structured_intent_exposes_only_the_matching_proposal_tool() -> None:
+    executor = ScopedToolExecutor(
+        BusinessTools(BusinessRepository.from_default_seed()),
+        "cus_orbit_001",
+        "support",
+        action_service=FakeActionService(),  # type: ignore[arg-type]
+        request_id="request-status",
+        write_intents=("update_ticket_status",),
+    )
+
+    exposed = set(ACTION_PROPOSAL_TOOLS).intersection(executor.allowed_names)
+    assert exposed == {"propose_update_ticket_status"}

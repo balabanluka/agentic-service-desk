@@ -145,6 +145,7 @@ class ServiceDeskGraph:
             needs_clarification=decision.needs_clarification,
             route_rationale=decision.rationale,
             diagnostic_confidence=decision.diagnostic_confidence,
+            write_intents=list(decision.write_intents),
         )
 
     @staticmethod
@@ -169,6 +170,7 @@ class ServiceDeskGraph:
             route,
             action_service=self._action_service,
             request_id=state["request_id"],
+            write_intents=tuple(state.get("write_intents", [])),
         )
         tool_results = list(state["tool_results"])
         initial_tool_calls = list(state["tool_calls"])

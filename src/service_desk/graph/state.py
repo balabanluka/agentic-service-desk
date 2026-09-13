@@ -38,6 +38,7 @@ class AgentState(TypedDict):
     needs_clarification: NotRequired[bool]
     route_rationale: NotRequired[str]
     diagnostic_confidence: NotRequired[float | None]
+    write_intents: NotRequired[list[str]]
     answer: NotRequired[str]
     answer_source: NotRequired[str]
     error_code: NotRequired[str]

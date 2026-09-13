@@ -134,6 +134,12 @@ ACTION_PROPOSAL_TOOLS = (
     "propose_update_ticket_priority",
 )
 
+PROPOSAL_TOOL_BY_INTENT = {
+    "create_ticket": "propose_create_ticket",
+    "update_ticket_status": "propose_update_ticket_status",
+    "update_ticket_priority": "propose_update_ticket_priority",
+}
+
 
 class ScopedToolExecutor:
     """Executes only an allowlisted tool against the current customer context."""
@@ -146,14 +152,20 @@ class ScopedToolExecutor:
         *,
         action_service: ActionService | None = None,
         request_id: str = "",
+        write_intents: tuple[str, ...] = (),
     ) -> None:
         self._tools = tools
         self._customer_id = customer_id
         self._route = route
         self._action_service = action_service
         self._request_id = request_id
+        proposed_tools = tuple(
+            PROPOSAL_TOOL_BY_INTENT[intent]
+            for intent in dict.fromkeys(write_intents)
+            if intent in PROPOSAL_TOOL_BY_INTENT
+        )
         self._allowed = WORKFLOW_ALLOWLISTS[route] + (
-            ACTION_PROPOSAL_TOOLS if action_service is not None else ()
+            proposed_tools if action_service is not None else ()
         )
 
     @property

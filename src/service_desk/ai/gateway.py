@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 
 RouteName = Literal["support", "billing", "technical"]
+WriteIntent = Literal["create_ticket", "update_ticket_status", "update_ticket_priority"]
 
 
 class RouteDecision(BaseModel):
@@ -16,6 +17,7 @@ class RouteDecision(BaseModel):
     needs_clarification: bool
     rationale: str = Field(min_length=1, max_length=500)
     diagnostic_confidence: float | None = Field(default=None, ge=0, le=1)
+    write_intents: tuple[WriteIntent, ...] = Field(default=(), max_length=3)
 
 
 class ToolCall(BaseModel):
@@ -83,6 +85,10 @@ def require_valid_route(decision: RouteDecision) -> RouteDecision:
         raise ModelGatewayError("clarification decisions must not select a route")
     if not decision.needs_clarification and decision.route is None:
         raise ModelGatewayError("routing decisions must select a route")
+    if decision.needs_clarification and decision.write_intents:
+        raise ModelGatewayError("clarification decisions cannot authorize write proposals")
+    if len(decision.write_intents) != len(set(decision.write_intents)):
+        raise ModelGatewayError("write intent decisions must not contain duplicates")
     return decision
 
 
