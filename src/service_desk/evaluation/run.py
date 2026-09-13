@@ -32,7 +32,11 @@ def main() -> None:
         choices=("validate", "workflow-offline", "retrieval-live", "workflow-live"),
     )
     parser.add_argument("--split", choices=("development", "held_out"), default="development")
-    parser.add_argument("--workflow-version", choices=("v1", "v2"), default="v1")
+    parser.add_argument(
+        "--workflow-version",
+        default="v1",
+        help="Workflow dataset version, for example v1 or v3.",
+    )
     parser.add_argument("--top-k", type=int, default=None)
     parser.add_argument(
         "--limit",
@@ -114,14 +118,12 @@ def _validation_report(datasets_root: Path) -> dict[str, object]:
     manifests = verify_all_held_out_manifests(datasets_root / "held_out")
     manifest = manifests["manifest-v1.json"]
     files = {
-        "development": {
-            filename: file_fingerprint(datasets_root / "development" / filename)
-            for filename in ("retrieval-v1.json", "workflow-v1.json")
-        },
-        "held_out": {
-            filename: file_fingerprint(datasets_root / "held_out" / filename)
-            for filename in ("retrieval-v1.json", "workflow-v1.json", "workflow-v2.json")
-        },
+        split: {
+            path.name: file_fingerprint(path)
+            for path in sorted((datasets_root / split).glob("*.json"))
+            if not path.name.startswith("manifest-")
+        }
+        for split in ("development", "held_out")
     }
     return {
         "evaluation_type": "dataset_validation",
@@ -147,9 +149,14 @@ def _verify_held_out_if_needed(
 
 
 def _workflow_dataset_path(datasets_root: Path, split: str, workflow_version: str) -> Path:
-    if workflow_version == "v2" and split != "held_out":
-        raise SystemExit("workflow-v2 is available only as the frozen held-out dataset")
-    return datasets_root / split / f"workflow-{workflow_version}.json"
+    if workflow_version != "v1" and split != "held_out":
+        raise SystemExit(
+            f"workflow-{workflow_version} is available only as a frozen held-out dataset"
+        )
+    path = datasets_root / split / f"workflow-{workflow_version}.json"
+    if not path.is_file():
+        raise SystemExit(f"workflow dataset does not exist: {path.as_posix()}")
+    return path
 
 
 def _live_settings() -> Settings:

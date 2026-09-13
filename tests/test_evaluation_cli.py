@@ -37,11 +37,17 @@ def test_workflow_live_selection_allows_full_or_bounded_resume_runs() -> None:
         run._validate_workflow_live_selection(None, 7, 6)
 
 
-def test_workflow_v2_path_is_available_only_for_the_held_out_split() -> None:
+def test_frozen_workflow_versions_are_available_only_for_the_held_out_split() -> None:
     datasets_root = Path("evaluation/datasets")
 
-    assert run._workflow_dataset_path(datasets_root, "held_out", "v2") == (
-        datasets_root / "held_out" / "workflow-v2.json"
-    )
-    with pytest.raises(SystemExit, match="held-out"):
-        run._workflow_dataset_path(datasets_root, "development", "v2")
+    for version in ("v2", "v3"):
+        assert run._workflow_dataset_path(datasets_root, "held_out", version) == (
+            datasets_root / "held_out" / f"workflow-{version}.json"
+        )
+        with pytest.raises(SystemExit, match="held-out"):
+            run._workflow_dataset_path(datasets_root, "development", version)
+
+
+def test_missing_workflow_version_is_rejected_clearly() -> None:
+    with pytest.raises(SystemExit, match="does not exist"):
+        run._workflow_dataset_path(Path("evaluation/datasets"), "held_out", "v999")

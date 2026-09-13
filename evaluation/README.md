@@ -4,7 +4,9 @@ This directory contains original synthetic evaluation data for the frozen
 Harborlight Cloud knowledge corpus. Development datasets may guide implementation
 work. Held-out datasets are frozen benchmarks: do not change their cases after
 observing their results. `workflow-v1.json` remains the historical pre-fix
-benchmark; `workflow-v2.json` is the separately frozen post-fix workflow set.
+benchmark; `workflow-v2.json` is the first separately frozen post-fix workflow
+set, and `workflow-v3.json` is the unseen set frozen after the general
+primary-intent routing correction. Every observed version remains immutable.
 The manifests record SHA-256 fingerprints of normalized UTF-8 held-out JSON
 content and are verified by the evaluation CLI.
 
