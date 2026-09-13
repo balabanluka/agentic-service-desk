@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-service-desk"
-version = "0.1.0"
-description = "Controlled agentic AI service desk for a fictional SaaS company."
+version = "2.0.0"
+description = "Controlled, grounded agentic AI service desk for a fictional SaaS company."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2,<2",
     "httpx>=0.27,<1",
     "pytest>=8.0,<9",
 ]

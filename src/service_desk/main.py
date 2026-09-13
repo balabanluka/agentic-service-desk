@@ -1,7 +1,8 @@
-"""FastAPI application factory for Agentic Service Desk V1."""
+"""FastAPI application factory for Agentic Service Desk."""
 
 from fastapi import FastAPI
 
+from service_desk import __version__
 from service_desk.ai.gateway import ModelGateway, ModelGatewayError
 from service_desk.ai.openai_gateway import OpenAIModelGateway
 from service_desk.api.routes import create_router
@@ -58,7 +59,7 @@ def create_app(
     business_tools = BusinessTools(repository or BusinessRepository.from_default_seed())
     chat_service = ChatService(ServiceDeskGraph(business_tools, model_gateway, knowledge_retriever))
 
-    app = FastAPI(title="Agentic Service Desk", version="0.1.0")
+    app = FastAPI(title="Agentic Service Desk", version=__version__)
     app.include_router(create_router(chat_service))
     return app
 

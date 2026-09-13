@@ -1,7 +1,7 @@
 # V2 Evaluation Data
 
 This directory contains original synthetic evaluation data for the frozen
-Harborlight Cloud knowledge corpus. Development datasets may guide implementation
+Harborlight Workspace knowledge corpus. Development datasets may guide implementation
 work. Held-out datasets are frozen benchmarks: do not change their cases after
 observing their results. `workflow-v1.json` remains the historical pre-fix
 benchmark; `workflow-v2.json` is the first separately frozen post-fix workflow
@@ -16,3 +16,5 @@ The explicit live workflow mode records answers for human review; it is never ru
 by pytest and requires a manual confirmation flag because it uses OpenAI APIs.
 
 Generated reports belong in `evaluation/reports/`, which is intentionally ignored.
+The deliberately sanitized, source-controlled V2 history is in
+`evaluation/results/v2-benchmark-summary.json`.

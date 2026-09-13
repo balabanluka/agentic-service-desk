@@ -1,1 +1,3 @@
-"""Agentic Service Desk V1."""
+"""Agentic Service Desk."""
+
+__version__ = "2.0.0"
