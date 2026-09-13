@@ -1,0 +1,9 @@
+{
+  "manifest_version": "v3",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "files": {
+    "workflow-v3.json": "5cdbe8f3e183db98ecc745a31ce88630578ed79846aab7a505fca62a09dd46f3"
+  }
+}
