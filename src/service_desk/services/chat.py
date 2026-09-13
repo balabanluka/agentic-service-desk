@@ -16,6 +16,14 @@ class KnowledgeSourceMetadata(BaseModel):
     source_path: str
 
 
+class PendingActionMetadata(BaseModel):
+    action_id: str
+    action_type: str
+    status: str
+    approval_required: bool
+    expires_at: str
+
+
 class ExecutionMetadata(BaseModel):
     request_id: str
     selected_route: str | None
@@ -26,6 +34,7 @@ class ExecutionMetadata(BaseModel):
     route_rationale: str
     diagnostic_confidence: float | None = None
     knowledge_sources: list[KnowledgeSourceMetadata] = Field(default_factory=list)
+    pending_actions: list[PendingActionMetadata] = Field(default_factory=list)
 
 
 class ChatResult(BaseModel):
@@ -55,5 +64,6 @@ class ChatService:
                 ),
                 diagnostic_confidence=state.get("diagnostic_confidence"),
                 knowledge_sources=state.get("knowledge_sources", []),
+                pending_actions=state.get("pending_actions", []),
             ),
         )

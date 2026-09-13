@@ -25,7 +25,14 @@ class ToolCall(BaseModel):
 
 class ToolResult(BaseModel):
     name: str
-    status: Literal["success", "not_found", "denied", "invalid_arguments"]
+    status: Literal[
+        "success",
+        "not_found",
+        "denied",
+        "invalid_arguments",
+        "pending_approval",
+        "unavailable",
+    ]
     content: dict[str, object]
 
 

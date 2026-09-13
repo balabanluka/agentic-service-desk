@@ -18,6 +18,7 @@ from service_desk.graph.state import AgentState, KnowledgeSourceRecord
 from service_desk.graph.workflows.permissions import ScopedToolExecutor
 from service_desk.knowledge.retrieval import KnowledgeSearchProvider, KnowledgeSearchResult
 from service_desk.tools.business import BusinessTools
+from service_desk.ticketing.actions import ActionService
 
 MAX_WORKFLOW_TOOL_TURNS = 3
 MAX_WORKFLOW_TOOL_CALLS = 3
@@ -66,10 +67,12 @@ class ServiceDeskGraph:
         tools: BusinessTools,
         model_gateway: ModelGateway,
         knowledge_retriever: KnowledgeSearchProvider | None = None,
+        action_service: ActionService | None = None,
     ) -> None:
         self._tools = tools
         self._model_gateway = model_gateway
         self._knowledge_retriever = knowledge_retriever
+        self._action_service = action_service
         self._graph = self._build_graph()
 
     def invoke(self, customer_id: str, message: str, request_id: str | None = None) -> AgentState:
@@ -82,6 +85,7 @@ class ServiceDeskGraph:
                 "tool_calls": [],
                 "tool_results": [],
                 "knowledge_sources": [],
+                "pending_actions": [],
             }
         )
 
@@ -159,7 +163,13 @@ class ServiceDeskGraph:
         return self._run_workflow(state, "technical", "technical_workflow")
 
     def _run_workflow(self, state: AgentState, route: RouteName, node: str) -> dict[str, object]:
-        executor = ScopedToolExecutor(self._tools, state["customer_id"], route)
+        executor = ScopedToolExecutor(
+            self._tools,
+            state["customer_id"],
+            route,
+            action_service=self._action_service,
+            request_id=state["request_id"],
+        )
         tool_results = list(state["tool_results"])
         initial_tool_calls = list(state["tool_calls"])
         workflow_tool_calls: list[dict[str, str]] = []
@@ -184,6 +194,7 @@ class ServiceDeskGraph:
                     tool_calls=[*initial_tool_calls, *workflow_tool_calls],
                     tool_results=tool_results,
                     knowledge_sources=[_source_record(source) for source in knowledge_sources],
+                    pending_actions=_pending_action_records(tool_results),
                     answer=turn.answer,
                     answer_source="model",
             )
@@ -261,6 +272,7 @@ class ServiceDeskGraph:
             tool_calls=[*initial_tool_calls, *workflow_tool_calls],
             tool_results=tool_results,
             knowledge_sources=[_source_record(source) for source in knowledge_sources],
+            pending_actions=_pending_action_records(tool_results),
             answer=final_turn.answer,
             answer_source="model",
         )
@@ -317,3 +329,17 @@ def _source_record(source: KnowledgeSource) -> KnowledgeSourceRecord:
         "chunk_id": source.chunk_id,
         "source_path": source.source_path,
     }
+
+
+def _pending_action_records(tool_results: list[ToolResult]) -> list[dict[str, object]]:
+    return [
+        {
+            "action_id": str(result.content["action_id"]),
+            "action_type": str(result.content["action_type"]),
+            "status": str(result.content["status"]),
+            "approval_required": bool(result.content["approval_required"]),
+            "expires_at": str(result.content["expires_at"]),
+        }
+        for result in tool_results
+        if result.status == "pending_approval"
+    ]

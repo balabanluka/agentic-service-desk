@@ -8,6 +8,7 @@ from service_desk.domain.models import Customer, Invoice, SeedData, Subscription
 
 class BusinessRepository:
     def __init__(self, seed_data: SeedData) -> None:
+        self.seed_data = seed_data
         self._customers = {customer.id: customer for customer in seed_data.customers}
         self._subscriptions = {
             subscription.customer_id: subscription for subscription in seed_data.subscriptions

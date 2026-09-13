@@ -42,7 +42,7 @@ class Invoice(BaseModel):
 class Ticket(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    id: str = Field(pattern=r"^tic_[a-z]+_\d{4}$")
+    id: str = Field(pattern=r"^tic_[a-z]+_[a-z0-9]{4,32}$")
     customer_id: str
     subject: str
     category: str

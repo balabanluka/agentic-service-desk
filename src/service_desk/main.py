@@ -13,6 +13,8 @@ from service_desk.knowledge.embeddings import OpenAIEmbeddingClient
 from service_desk.knowledge.retrieval import DatabaseKnowledgeRetriever, KnowledgeSearchProvider
 from service_desk.services.chat import ChatService
 from service_desk.tools.business import BusinessTools
+from service_desk.ticketing.actions import ActionService
+from service_desk.ticketing.mcp import McpTicketGateway, TicketGateway
 
 
 class UnavailableModelGateway:
@@ -31,6 +33,8 @@ def create_app(
     repository: BusinessRepository | None = None,
     settings: Settings | None = None,
     knowledge_retriever: KnowledgeSearchProvider | None = None,
+    ticket_gateway: TicketGateway | None = None,
+    action_service: ActionService | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings()
     api_key = resolved_settings.openai_api_key
@@ -56,11 +60,38 @@ def create_app(
             default_top_k=resolved_settings.knowledge_default_top_k,
         )
 
-    business_tools = BusinessTools(repository or BusinessRepository.from_default_seed())
-    chat_service = ChatService(ServiceDeskGraph(business_tools, model_gateway, knowledge_retriever))
+    if (
+        ticket_gateway is None
+        and uses_default_model_gateway
+        and resolved_settings.database_url is not None
+    ):
+        ticket_gateway = McpTicketGateway(
+            resolved_settings.mcp_ticket_server_url,
+            timeout_seconds=resolved_settings.mcp_request_timeout_seconds,
+        )
+    if (
+        action_service is None
+        and ticket_gateway is not None
+        and uses_default_model_gateway
+        and resolved_settings.database_url is not None
+    ):
+        action_service = ActionService(
+            database_url=resolved_settings.database_url.get_secret_value(),
+            ticket_gateway=ticket_gateway,
+            ttl_minutes=resolved_settings.action_ttl_minutes,
+        )
+
+    business_tools = BusinessTools(
+        repository or BusinessRepository.from_default_seed(), ticket_gateway=ticket_gateway
+    )
+    chat_service = ChatService(
+        ServiceDeskGraph(
+            business_tools, model_gateway, knowledge_retriever, action_service=action_service
+        )
+    )
 
     app = FastAPI(title="Agentic Service Desk", version=__version__)
-    app.include_router(create_router(chat_service))
+    app.include_router(create_router(chat_service, action_service))
     return app
 
 
