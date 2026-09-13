@@ -50,7 +50,10 @@ values from create_ticket, update_ticket_status, and update_ticket_priority when
 user gives a present-tense instruction to perform that action. Keep it empty for
 questions, policy explanations, hypotheticals, examples, conditional future actions,
 or vague help. Multiple explicit same-domain ticket changes may produce multiple
-values. Return JSON matching the supplied schema."""
+values. Setting the initial status or priority while creating a new ticket belongs to
+create_ticket alone; do not also classify it as an update. Use an update intent only
+when the user asks to change an already-existing ticket. Return JSON matching the
+supplied schema."""
 
 
 def route_decision_schema() -> dict[str, object]:

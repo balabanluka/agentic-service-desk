@@ -29,3 +29,14 @@ def test_route_decision_does_not_apply_a_confidence_threshold() -> None:
     )
 
     assert decision.route == "technical"
+
+
+def test_clarification_cannot_expose_a_write_proposal() -> None:
+    with pytest.raises(ModelGatewayError, match="cannot authorize write proposals"):
+        require_valid_route(
+            RouteDecision(
+                needs_clarification=True,
+                rationale="Independent outcomes need clarification.",
+                write_intents=("create_ticket",),
+            )
+        )
