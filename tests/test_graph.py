@@ -162,6 +162,9 @@ def test_answer_only_turn_rejects_a_fourth_tool_without_executing_it() -> None:
         ],
         "exhaustion_reason": "answer_only_turn_requested_tool",
         "attempted_tool_names": ["get_invoice"],
+        "needs_clarification": False,
+        "diagnostic_confidence": 0.9,
+        "route_rationale": "Test-selected route.",
     }
 
 

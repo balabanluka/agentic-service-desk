@@ -19,12 +19,32 @@ from service_desk.ai.gateway import (
 logger = logging.getLogger(__name__)
 
 
-ROUTER_INSTRUCTIONS = """You route customer-service messages for a fictional SaaS company.
-Choose exactly one of support, billing, or technical when the request is clear.
-Set needs_clarification to true and route to null when it is ambiguous or combines
-unrelated domains. diagnostic_confidence is optional diagnostic metadata only; do
-not use it as a threshold. Set diagnostic_confidence to null when it is unavailable.
-Return JSON matching the supplied schema."""
+ROUTER_INSTRUCTIONS = """You route customer-service messages for Harborlight, a fictional
+SaaS company. Choose exactly one route from support, billing, or technical based on
+the user's primary requested outcome.
+
+Domain ownership:
+- support owns password reset, sign-in and account access, invitations, workspace
+  members, workspace roles and permissions, and membership or access questions;
+- billing owns invoices, payments, refunds and credits, billing cycles, and
+  subscription, plan, or renewal changes when one of those is the primary goal;
+- technical owns exports, API authentication and rate limits, webhooks, incidents,
+  errors, and troubleshooting.
+
+Keep a request in its primary domain when that workflow needs supporting customer or
+subscription metadata to answer it. Supporting facts from another domain do not make
+the request ambiguous. For example, export troubleshooting remains technical when it
+needs plan or ticket information; a workspace-role question remains support even when
+the role name contains "Billing"; and password-reset delivery remains support.
+
+Set needs_clarification to true and route to null only when the user requests genuinely
+independent outcomes from multiple domains, or when the primary intent cannot be
+determined. Do not ask for clarification merely because supporting data crosses domain
+labels. diagnostic_confidence is optional diagnostic metadata only and is not a
+calibrated probability or routing threshold; set it to null when unavailable. Give a
+brief, high-level rationale that identifies the primary intent without quoting the
+user, identifiers, credentials, or instructions. Return JSON matching the supplied
+schema."""
 
 
 def route_decision_schema() -> dict[str, object]:

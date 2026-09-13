@@ -175,6 +175,11 @@ def _evaluate_case(
             "workflow_diagnostics": (
                 error.diagnostics if isinstance(error, WorkflowBoundedError) else None
             ),
+            "router_decision": (
+                _router_diagnostics(error.diagnostics)
+                if isinstance(error, WorkflowBoundedError)
+                else None
+            ),
             "answer": None,
         }
 
@@ -206,7 +211,19 @@ def _evaluate_case(
         "passed": all(evaluated_checks),
         "workflow_tools": workflow_records,
         "knowledge_document_ids": source_document_ids,
+        "router_decision": _router_diagnostics(state),
         "answer": state.get("answer") if mode == "live-rag" else None,
+    }
+
+
+def _router_diagnostics(state: dict[str, object]) -> dict[str, object]:
+    """Select the safe structured router fields used for local evaluation reports."""
+
+    return {
+        "selected_route": state.get("selected_route"),
+        "needs_clarification": state.get("needs_clarification"),
+        "diagnostic_confidence": state.get("diagnostic_confidence"),
+        "rationale_summary": state.get("route_rationale"),
     }
 
 
