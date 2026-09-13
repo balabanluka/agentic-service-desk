@@ -149,3 +149,29 @@ def test_structured_intent_exposes_only_the_matching_proposal_tool() -> None:
 
     exposed = set(ACTION_PROPOSAL_TOOLS).intersection(executor.allowed_names)
     assert exposed == {"propose_update_ticket_status"}
+
+
+def test_clarification_with_detected_write_intent_never_enters_a_workflow() -> None:
+    class ClarificationWithIntentGateway(FakeModelGateway):
+        def route(self, message: str) -> RouteDecision:
+            del message
+            return RouteDecision(
+                needs_clarification=True,
+                rationale="The request has independent technical and billing outcomes.",
+                write_intents=("create_ticket",),
+            )
+
+    actions = FakeActionService()
+    result = ServiceDeskGraph(
+        BusinessTools(BusinessRepository.from_default_seed()),
+        ClarificationWithIntentGateway(),
+        action_service=actions,  # type: ignore[arg-type]
+    ).invoke(
+        "cus_orbit_001",
+        "Open a webhook ticket and arrange an unrelated renewal credit.",
+    )
+
+    assert result["selected_route"] == "clarification"
+    assert result["write_intents"] == ["create_ticket"]
+    assert result["transitions"] == ["load_customer", "route_request", "clarify"]
+    assert actions.proposals == []

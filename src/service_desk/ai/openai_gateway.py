@@ -52,8 +52,10 @@ questions, policy explanations, hypotheticals, examples, conditional future acti
 or vague help. Multiple explicit same-domain ticket changes may produce multiple
 values. Setting the initial status or priority while creating a new ticket belongs to
 create_ticket alone; do not also classify it as an update. Use an update intent only
-when the user asks to change an already-existing ticket. Return JSON matching the
-supplied schema."""
+when the user asks to change an already-existing ticket. This field records detected
+intent; it does not authorize execution. A clarification decision may still report an
+explicit ticket intent, but the clarification branch exposes no workflow or action
+tools. Return JSON matching the supplied schema."""
 
 
 def route_decision_schema() -> dict[str, object]:

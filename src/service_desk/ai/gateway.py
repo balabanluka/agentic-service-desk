@@ -85,8 +85,6 @@ def require_valid_route(decision: RouteDecision) -> RouteDecision:
         raise ModelGatewayError("clarification decisions must not select a route")
     if not decision.needs_clarification and decision.route is None:
         raise ModelGatewayError("routing decisions must select a route")
-    if decision.needs_clarification and decision.write_intents:
-        raise ModelGatewayError("clarification decisions cannot authorize write proposals")
     if len(decision.write_intents) != len(set(decision.write_intents)):
         raise ModelGatewayError("write intent decisions must not contain duplicates")
     return decision
