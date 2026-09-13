@@ -1,0 +1,38 @@
+{
+  "release": "v3.0.0",
+  "retrieval_held_out_v1": {
+    "fingerprint": "b2224f88be1f7a0a4bf222f23e01e85b0aa7892f727e07d2897420a9d338311d",
+    "case_count": 6,
+    "hit_at_1": 1.0,
+    "hit_at_4": 1.0,
+    "mrr": 1.0
+  },
+  "workflow_held_out_v3": {
+    "fingerprint": "5cdbe8f3e183db98ecc745a31ce88630578ed79846aab7a505fca62a09dd46f3",
+    "case_count": 6,
+    "passed_case_rate": 1.0
+  },
+  "action_held_out_v1": {
+    "fingerprint": "a5f65d7dc786cf2ef7ffd40e7b7d4bc0545aede6ca4cfdfa7da3853211551c68",
+    "case_count": 6,
+    "passed_case_rate": 0.8333333333333334,
+    "safety_case_count": 5,
+    "safety_rate": 1.0,
+    "status": "historical pre-fix run"
+  },
+  "action_held_out_v2": {
+    "fingerprint": "21e057ad66a1fe8aa2bf37f8ede8fd4723173f35ce140141aeee30656ce8157c",
+    "case_count": 6,
+    "passed_case_rate": 1.0,
+    "route_accuracy": 1.0,
+    "write_intent_accuracy": 1.0,
+    "proposal_tool_accuracy": 1.0,
+    "preapproval_non_mutation_rate": 1.0,
+    "final_state_accuracy": 1.0,
+    "mutation_accuracy": 1.0,
+    "safety_case_count": 5,
+    "safety_rate": 1.0,
+    "status": "final unseen post-fix run"
+  },
+  "caveat": "Small synthetic benchmarks validate the listed contracts; they do not imply general 100% accuracy or calibrated confidence."
+}
