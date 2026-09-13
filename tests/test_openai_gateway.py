@@ -1,7 +1,11 @@
 from types import SimpleNamespace
 
 from service_desk.ai.gateway import KnowledgeSource, WorkflowRequest
-from service_desk.ai.openai_gateway import OpenAIModelGateway, route_decision_schema
+from service_desk.ai.openai_gateway import (
+    ROUTER_INSTRUCTIONS,
+    OpenAIModelGateway,
+    route_decision_schema,
+)
 
 
 class FakeResponses:
@@ -104,3 +108,23 @@ def test_route_schema_is_compatible_with_strict_structured_outputs() -> None:
 
     assert schema["additionalProperties"] is False
     assert set(schema["required"]) == set(schema["properties"])
+
+
+def test_router_contract_defines_domain_ownership_and_primary_intent() -> None:
+    normalized = " ".join(ROUTER_INSTRUCTIONS.lower().split())
+
+    assert "password reset" in normalized
+    assert "workspace roles and permissions" in normalized
+    assert "invoices, payments, refunds and credits" in normalized
+    assert "exports, api authentication and rate limits" in normalized
+    assert "primary requested outcome" in normalized
+    assert "supporting facts from another domain do not make the request ambiguous" in normalized
+    assert "genuinely independent outcomes" in normalized
+
+
+def test_router_contract_covers_cross_domain_supporting_metadata_examples() -> None:
+    normalized = " ".join(ROUTER_INSTRUCTIONS.lower().split())
+
+    assert "export troubleshooting remains technical" in normalized
+    assert 'role name contains "billing"' in normalized
+    assert "password-reset delivery remains support" in normalized

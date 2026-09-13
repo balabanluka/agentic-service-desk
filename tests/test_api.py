@@ -52,6 +52,9 @@ def test_chat_returns_answer_and_execution_metadata(client: TestClient) -> None:
     payload = response.json()
     assert payload["answer"].startswith("Offline billing answer")
     assert payload["execution"]["selected_route"] == "billing"
+    assert payload["execution"]["needs_clarification"] is False
+    assert payload["execution"]["route_rationale"] == "Test-selected route."
+    assert payload["execution"]["diagnostic_confidence"] == 0.9
     assert payload["execution"]["tools_used"] == ["get_customer", "get_subscription"]
     assert payload["execution"]["graph_path"] == [
         "load_customer",

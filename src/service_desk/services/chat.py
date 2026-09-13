@@ -19,9 +19,11 @@ class KnowledgeSourceMetadata(BaseModel):
 class ExecutionMetadata(BaseModel):
     request_id: str
     selected_route: str | None
+    needs_clarification: bool
     tools_used: list[str]
     graph_path: list[str]
     answer_source: str
+    route_rationale: str
     diagnostic_confidence: float | None = None
     knowledge_sources: list[KnowledgeSourceMetadata] = Field(default_factory=list)
 
@@ -44,9 +46,13 @@ class ChatService:
             execution=ExecutionMetadata(
                 request_id=state["request_id"],
                 selected_route=state.get("selected_route"),
+                needs_clarification=state.get("needs_clarification", False),
                 tools_used=[record["name"] for record in state["tool_calls"]],
                 graph_path=state["transitions"],
                 answer_source=state["answer_source"],
+                route_rationale=state.get(
+                    "route_rationale", "Routing was not required for this response."
+                ),
                 diagnostic_confidence=state.get("diagnostic_confidence"),
                 knowledge_sources=state.get("knowledge_sources", []),
             ),

@@ -48,6 +48,17 @@ class WorkflowBoundedError(ModelGatewayError):
             "attempted_tool_names": list(attempted_tool_names),
         }
 
+    def add_route_decision(self, state: AgentState) -> None:
+        """Attach only safe structured router metadata to internal diagnostics."""
+
+        self.diagnostics.update(
+            {
+                "needs_clarification": state.get("needs_clarification", False),
+                "diagnostic_confidence": state.get("diagnostic_confidence"),
+                "route_rationale": state.get("route_rationale"),
+            }
+        )
+
 
 class ServiceDeskGraph:
     def __init__(
@@ -177,13 +188,15 @@ class ServiceDeskGraph:
                     answer_source="model",
             )
             if len(turn.tool_calls) > remaining_tool_calls:
-                raise WorkflowBoundedError(
+                error = WorkflowBoundedError(
                     route=route,
                     tool_calls=workflow_tool_calls,
                     tool_results=tool_results,
                     reason="tool_call_budget_exceeded",
                     attempted_tool_names=tuple(tool_call.name for tool_call in turn.tool_calls),
                 )
+                error.add_route_decision(state)
+                raise error
             for tool_call in turn.tool_calls:
                 result, record = executor.execute(tool_call)
                 tool_results.append(result)
@@ -224,20 +237,24 @@ class ServiceDeskGraph:
         )
         final_turn = self._model_gateway.next_workflow_turn(request)
         if final_turn.tool_calls:
-            raise WorkflowBoundedError(
+            error = WorkflowBoundedError(
                 route=route,
                 tool_calls=workflow_tool_calls,
                 tool_results=tool_results,
                 reason="answer_only_turn_requested_tool",
                 attempted_tool_names=tuple(tool_call.name for tool_call in final_turn.tool_calls),
             )
+            error.add_route_decision(state)
+            raise error
         if not final_turn.answer:
-            raise WorkflowBoundedError(
+            error = WorkflowBoundedError(
                 route=route,
                 tool_calls=workflow_tool_calls,
                 tool_results=tool_results,
                 reason="answer_only_turn_missing_answer",
             )
+            error.add_route_decision(state)
+            raise error
         return self._updated(
             state,
             node,

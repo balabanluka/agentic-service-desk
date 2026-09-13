@@ -211,3 +211,24 @@ def test_evaluation_reports_safe_partial_trace_for_bounded_workflow_failure() ->
         "attempted_tool_names": ["get_invoice"],
     }
     assert "not-in-report" not in str(diagnostics)
+
+
+def test_evaluation_reports_safe_structured_router_decision() -> None:
+    case = _clarification_case()
+    state = _state_for(case)
+    state["route_rationale"] = "The primary intent cannot be determined."
+    state["diagnostic_confidence"] = 0.2
+
+    report = evaluate_workflows(
+        _workflow_dataset(case),
+        dataset_path_fingerprint="test",
+        invoke_case=lambda _: state,
+        mode="live-rag",
+    )
+
+    assert report["cases"][0]["router_decision"] == {
+        "selected_route": "clarification",
+        "needs_clarification": True,
+        "diagnostic_confidence": 0.2,
+        "rationale_summary": "The primary intent cannot be determined.",
+    }
