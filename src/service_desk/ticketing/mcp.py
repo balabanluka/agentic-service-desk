@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 
 READ_POLICY = {"effect": "read", "approval_required": False}
 WRITE_POLICY = {"effect": "write", "approval_required": True}
+_DEFINITIVE_TOOL_ERROR_CODES = frozenset(
+    {
+        "action_expired",
+        "action_not_approved",
+        "action_not_found",
+        "action_type_mismatch",
+        "ticket_not_owned_or_wrong_domain",
+    }
+)
 
 
 class TicketMcpError(RuntimeError):
@@ -203,14 +212,19 @@ class McpTicketGateway:
                 async with Client(self._server, raise_exceptions=isinstance(self._server, MCPServer)) as client:
                     result = await client.call_tool(name, arguments)
             if result.is_error:
-                raise TicketMcpToolError()
+                code = _definitive_tool_error_code(result.content)
+                if code is not None:
+                    raise TicketMcpToolError(code)
+                raise TicketMcpUnavailable("ticket MCP outcome is unavailable")
             if result.structured_content is None:
-                raise TicketMcpToolError("mcp_missing_structured_content")
+                raise TicketMcpUnavailable("ticket MCP response is incomplete")
             return result.structured_content
 
         try:
             return anyio.run(invoke)
         except TicketMcpToolError:
+            raise
+        except TicketMcpUnavailable:
             raise
         except Exception as error:
             logger.warning(
@@ -219,3 +233,16 @@ class McpTicketGateway:
                 type(error).__name__,
             )
             raise TicketMcpUnavailable("ticket MCP service is unavailable") from error
+
+
+def _definitive_tool_error_code(content: list[Any]) -> str | None:
+    """Recognize only the server's allowlisted, safe business rejection codes."""
+
+    for item in content:
+        text = getattr(item, "text", None)
+        if not isinstance(text, str):
+            continue
+        candidate = text.rsplit(": ", 1)[-1].strip("'\"")
+        if candidate in _DEFINITIVE_TOOL_ERROR_CODES:
+            return candidate
+    return None

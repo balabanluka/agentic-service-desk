@@ -127,6 +127,7 @@ def test_actions_are_durable_scoped_and_exactly_once_through_real_mcp() -> None:
             "UPDATE ticket_actions SET expires_at=%s WHERE action_id=%s",
             (datetime(2020, 1, 1, tzinfo=UTC), expired.action_id),
         )
+        assert service.get(expired.action_id, customer_id).status == "expired"
         assert service.approve(expired.action_id, customer_id).status == "expired"
         assert len(gateway.list_tickets(customer_id)) == 1
 

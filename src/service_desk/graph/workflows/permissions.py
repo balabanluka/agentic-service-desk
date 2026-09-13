@@ -236,7 +236,11 @@ class ScopedToolExecutor:
         except ValidationError:
             return self._result(call.name, "invalid_arguments", {"reason": "invalid_arguments"})
         except ActionProposalError as error:
-            status = "unavailable" if error.code == "ticket_service_unavailable" else "denied"
+            status = (
+                "unavailable"
+                if error.code in {"ticket_service_unavailable", "action_store_unavailable"}
+                else "denied"
+            )
             return self._result(call.name, status, {"reason": error.code})
         return self._result(
             call.name,

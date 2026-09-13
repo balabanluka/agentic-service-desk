@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+import psycopg
 
 from service_desk.data.repository import BusinessRepository
 from service_desk.main import create_app
@@ -117,4 +118,22 @@ def test_cross_customer_action_lookup_is_a_non_leaking_404() -> None:
     assert response.json() == {
         "detail": "Action was not found for this customer.",
         "code": "action_not_found",
+    }
+
+
+def test_action_store_failure_is_sanitized_and_retryable() -> None:
+    class UnavailableActionService(StubActionService):
+        def get(self, action_id: str, customer_id: str) -> TicketAction:
+            raise psycopg.OperationalError("synthetic database outage")
+
+    actions = UnavailableActionService()
+    response = _client(actions).get(
+        f"/api/actions/{actions.action.action_id}",
+        params={"customer_id": "cus_orbit_001"},
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "The action service is temporarily unavailable; retry is safe.",
+        "code": "action_service_unavailable",
     }

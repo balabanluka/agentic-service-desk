@@ -1,7 +1,10 @@
-"""HTTP routes for the V1 service desk."""
+"""HTTP routes for the controlled service desk."""
+
+import logging
 
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
+import psycopg
 
 from service_desk.ai.gateway import ModelGatewayError
 from service_desk.api.schemas import (
@@ -20,6 +23,9 @@ from service_desk.ticketing.actions import (
     ActionService,
 )
 from service_desk.ticketing.models import TicketAction
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_router(chat_service: ChatService, action_service: ActionService | None = None) -> APIRouter:
@@ -68,6 +74,8 @@ def create_router(chat_service: ChatService, action_service: ActionService | Non
             events = action_service.audit(action_id, customer_id)
         except ActionNotFoundError:
             return _action_not_found()
+        except psycopg.Error as error:
+            return _action_store_unavailable(error)
         return _action_response(action, events=events)
 
     @router.post(
@@ -93,6 +101,8 @@ def create_router(chat_service: ChatService, action_service: ActionService | Non
                 ).model_dump(),
                 headers={"X-Error-Code": "action_execution_unavailable"},
             )
+        except psycopg.Error as error:
+            return _action_store_unavailable(error)
         return _action_response(action)
 
     @router.post(
@@ -109,6 +119,8 @@ def create_router(chat_service: ChatService, action_service: ActionService | Non
             action = action_service.reject(action_id, request.customer_id)
         except ActionNotFoundError:
             return _action_not_found()
+        except psycopg.Error as error:
+            return _action_store_unavailable(error)
         return _action_response(action)
 
     return router
@@ -154,6 +166,18 @@ def _action_service_unavailable() -> JSONResponse:
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content=ErrorResponse(
             detail="The action service is not configured.", code="action_service_unavailable"
+        ).model_dump(),
+        headers={"X-Error-Code": "action_service_unavailable"},
+    )
+
+
+def _action_store_unavailable(error: psycopg.Error) -> JSONResponse:
+    logger.warning("Action store unavailable [error_type=%s]", type(error).__name__)
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content=ErrorResponse(
+            detail="The action service is temporarily unavailable; retry is safe.",
+            code="action_service_unavailable",
         ).model_dump(),
         headers={"X-Error-Code": "action_service_unavailable"},
     )

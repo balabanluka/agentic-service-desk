@@ -270,6 +270,25 @@ class ActionRepository:
             row = cursor.fetchone()
             return _action_from_row(row) if row else None
 
+    def expire_pending(self, action_id: str, customer_id: str) -> TicketAction | None:
+        now = datetime.now(UTC)
+        with self._connection.transaction(), self._connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                "SELECT * FROM ticket_actions WHERE action_id=%s AND customer_id=%s FOR UPDATE",
+                (action_id, customer_id),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            if str(row["status"]) == "pending" and row["expires_at"] <= now:
+                cursor.execute(
+                    "UPDATE ticket_actions SET status='expired', completed_at=%s, updated_at=%s WHERE action_id=%s RETURNING *",
+                    (now, now, action_id),
+                )
+                row = cursor.fetchone()
+                self._audit(cursor, action_id, "expired", "system", {})
+            return _action_from_row(row)
+
     def begin_approval(self, action_id: str, customer_id: str) -> TicketAction | None:
         now = datetime.now(UTC)
         with self._connection.transaction(), self._connection.cursor(row_factory=dict_row) as cursor:
@@ -321,7 +340,14 @@ class ActionRepository:
             row = cursor.fetchone()
             if row is None:
                 return None
-            if str(row["status"]) == "pending":
+            if str(row["status"]) == "pending" and row["expires_at"] <= now:
+                cursor.execute(
+                    "UPDATE ticket_actions SET status='expired', completed_at=%s, updated_at=%s WHERE action_id=%s RETURNING *",
+                    (now, now, action_id),
+                )
+                row = cursor.fetchone()
+                self._audit(cursor, action_id, "expired", "system", {})
+            elif str(row["status"]) == "pending":
                 cursor.execute(
                     "UPDATE ticket_actions SET status='rejected', rejected_at=%s, completed_at=%s, updated_at=%s WHERE action_id=%s RETURNING *",
                     (now, now, now, action_id),

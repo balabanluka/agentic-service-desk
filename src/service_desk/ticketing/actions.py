@@ -7,6 +7,8 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import uuid4
 
+import psycopg
+
 from service_desk.ai.gateway import RouteName
 from service_desk.ticketing.mcp import (
     TicketGateway,
@@ -91,25 +93,28 @@ class ActionService:
             action_type=action_type,
             payload=canonical_payload,
         )
-        repository = ActionRepository.connect(self._database_url)
         try:
-            return repository.create_pending(
-                action_id=f"act_{uuid4().hex}",
-                customer_id=customer_id,
-                route=route,
-                action_type=action_type,
-                payload=canonical_payload,
-                proposed_by_request_id=request_id,
-                proposal_key=proposal_key,
-                expires_at=datetime.now(UTC) + self._ttl,
-            )
-        finally:
-            repository.close()
+            repository = ActionRepository.connect(self._database_url)
+            try:
+                return repository.create_pending(
+                    action_id=f"act_{uuid4().hex}",
+                    customer_id=customer_id,
+                    route=route,
+                    action_type=action_type,
+                    payload=canonical_payload,
+                    proposed_by_request_id=request_id,
+                    proposal_key=proposal_key,
+                    expires_at=datetime.now(UTC) + self._ttl,
+                )
+            finally:
+                repository.close()
+        except psycopg.Error as error:
+            raise ActionProposalError("action_store_unavailable") from error
 
     def get(self, action_id: str, customer_id: str) -> TicketAction:
         repository = ActionRepository.connect(self._database_url)
         try:
-            action = repository.get_for_customer(action_id, customer_id)
+            action = repository.expire_pending(action_id, customer_id)
         finally:
             repository.close()
         if action is None:

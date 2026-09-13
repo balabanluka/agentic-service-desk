@@ -4,15 +4,19 @@ from datetime import date
 
 import anyio
 from mcp import Client
+import pytest
 
 from service_desk.domain.models import Ticket
 from service_desk.ticketing.mcp import (
     McpTicketGateway,
     READ_POLICY,
+    TicketMcpToolError,
+    TicketMcpUnavailable,
     WRITE_POLICY,
     create_ticket_mcp_server,
 )
 from service_desk.ticketing.models import ActionType, TicketMutationResult
+from service_desk.ticketing.repository import TicketActionNotExecutable
 
 
 class FakeTicketBackend:
@@ -74,3 +78,31 @@ def test_mcp_tools_publish_explicit_read_write_and_approval_metadata() -> None:
         assert tools[name].meta["service_desk"] == WRITE_POLICY
         assert tools[name].annotations.read_only_hint is False
         assert tools[name].annotations.idempotent_hint is True
+
+
+def test_known_mcp_business_rejection_is_definitive() -> None:
+    class RejectedBackend(FakeTicketBackend):
+        def execute_action(
+            self, action_id: str, expected_type: ActionType
+        ) -> TicketMutationResult:
+            raise TicketActionNotExecutable("action_expired")
+
+    gateway = McpTicketGateway(create_ticket_mcp_server(RejectedBackend()))
+
+    with pytest.raises(TicketMcpToolError) as captured:
+        gateway.execute("act_" + "a" * 32, "create_ticket")
+
+    assert captured.value.code == "action_expired"
+
+
+def test_unknown_mcp_server_failure_is_retryable_unavailable() -> None:
+    class FailedBackend(FakeTicketBackend):
+        def execute_action(
+            self, action_id: str, expected_type: ActionType
+        ) -> TicketMutationResult:
+            raise RuntimeError("synthetic database outage")
+
+    gateway = McpTicketGateway(create_ticket_mcp_server(FailedBackend()))
+
+    with pytest.raises(TicketMcpUnavailable):
+        gateway.execute("act_" + "a" * 32, "create_ticket")

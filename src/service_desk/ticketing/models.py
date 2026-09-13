@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -39,12 +39,6 @@ class UpdateTicketPriorityPayload(BaseModel):
 
     ticket_id: str = Field(pattern=r"^tic_[a-z]+_[a-z0-9]{4,32}$")
     priority: TicketPriority
-
-
-ActionPayload = Annotated[
-    CreateTicketPayload | UpdateTicketStatusPayload | UpdateTicketPriorityPayload,
-    Field(discriminator=None),
-]
 
 
 class TicketAction(BaseModel):
