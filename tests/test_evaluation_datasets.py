@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -76,4 +77,23 @@ def test_v3_manifest_freezes_only_the_new_workflow_dataset() -> None:
 
     assert manifests["manifest-v3.json"].files == {
         "workflow-v3.json": "5cdbe8f3e183db98ecc745a31ce88630578ed79846aab7a505fca62a09dd46f3"
+    }
+
+
+def test_sanitized_result_summary_references_the_frozen_datasets() -> None:
+    summary_path = _datasets_root().parents[0] / "results" / "v2-benchmark-summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    manifests = verify_all_held_out_manifests(_datasets_root() / "held_out")
+
+    assert summary["retrieval_held_out"]["dataset_fingerprint"] == (
+        manifests["manifest-v1.json"].files["retrieval-v1.json"]
+    )
+    workflow_results = {
+        result["dataset_id"]: result["dataset_fingerprint"]
+        for result in summary["workflow_held_out_history"]
+    }
+    assert workflow_results == {
+        "workflow-held-out-v1": manifests["manifest-v1.json"].files["workflow-v1.json"],
+        "workflow-held-out-v2": manifests["manifest-v2.json"].files["workflow-v2.json"],
+        "workflow-held-out-v3": manifests["manifest-v3.json"].files["workflow-v3.json"],
     }

@@ -36,10 +36,12 @@ class StaticKnowledgeRetriever:
 
 
 def test_health_is_available_without_an_openai_key() -> None:
-    response = TestClient(create_app(settings=Settings(_env_file=None))).get("/health")
+    app = create_app(settings=Settings(_env_file=None))
+    response = TestClient(app).get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+    assert app.version == "2.0.0"
 
 
 def test_chat_returns_answer_and_execution_metadata(client: TestClient) -> None:
