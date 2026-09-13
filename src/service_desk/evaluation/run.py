@@ -84,7 +84,9 @@ def main() -> None:
         action_path = _action_dataset_path(
             datasets_root, arguments.split, arguments.action_version
         )
-        _verify_action_held_out_if_needed(datasets_root, arguments.split)
+        _verify_action_held_out_if_needed(
+            datasets_root, arguments.split, arguments.action_version
+        )
         report = run_offline_action_evaluation(
             load_action_dataset(action_path),
             dataset_path_fingerprint=file_fingerprint(action_path),
@@ -137,7 +139,9 @@ def main() -> None:
         action_path = _action_dataset_path(
             datasets_root, arguments.split, arguments.action_version
         )
-        _verify_action_held_out_if_needed(datasets_root, arguments.split)
+        _verify_action_held_out_if_needed(
+            datasets_root, arguments.split, arguments.action_version
+        )
         settings = _live_settings()
         dataset = load_action_dataset(action_path)
         _require_dataset_settings_match(
@@ -237,10 +241,16 @@ def _action_dataset_path(datasets_root: Path, split: str, action_version: str) -
     return path
 
 
-def _verify_action_held_out_if_needed(datasets_root: Path, split: str) -> None:
+def _verify_action_held_out_if_needed(
+    datasets_root: Path, split: str, action_version: str
+) -> None:
     if split == "held_out":
+        manifest_by_version = {"v1": "manifest-v4.json", "v2": "manifest-v5.json"}
+        if action_version not in manifest_by_version:
+            raise SystemExit(f"no frozen manifest is configured for action-{action_version}")
         verify_held_out_manifest(
-            datasets_root / "held_out", manifest_filename="manifest-v4.json"
+            datasets_root / "held_out",
+            manifest_filename=manifest_by_version[action_version],
         )
 
 

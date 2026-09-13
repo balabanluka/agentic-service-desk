@@ -1,0 +1,9 @@
+{
+  "manifest_version": "v5",
+  "corpus_version": "kb-v1",
+  "chunking_version": "v1",
+  "embedding_model": "text-embedding-3-small",
+  "files": {
+    "action-v2.json": "21e057ad66a1fe8aa2bf37f8ede8fd4723173f35ce140141aeee30656ce8157c"
+  }
+}
