@@ -5,7 +5,12 @@ from __future__ import annotations
 from hashlib import sha256
 from pathlib import Path
 
-from service_desk.evaluation.models import HeldOutManifest, RetrievalDataset, WorkflowDataset
+from service_desk.evaluation.models import (
+    ActionEvaluationDataset,
+    HeldOutManifest,
+    RetrievalDataset,
+    WorkflowDataset,
+)
 
 
 def file_fingerprint(path: Path) -> str:
@@ -21,6 +26,10 @@ def load_retrieval_dataset(path: Path) -> RetrievalDataset:
 
 def load_workflow_dataset(path: Path) -> WorkflowDataset:
     return WorkflowDataset.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def load_action_dataset(path: Path) -> ActionEvaluationDataset:
+    return ActionEvaluationDataset.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def verify_held_out_manifest(

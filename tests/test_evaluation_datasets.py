@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from service_desk.evaluation.datasets import (
+    load_action_dataset,
     load_retrieval_dataset,
     load_workflow_dataset,
     verify_all_held_out_manifests,
@@ -25,6 +26,7 @@ def test_frozen_evaluation_dataset_sizes_and_metadata() -> None:
     held_out_workflow = load_workflow_dataset(root / "held_out" / "workflow-v1.json")
     held_out_workflow_v2 = load_workflow_dataset(root / "held_out" / "workflow-v2.json")
     held_out_workflow_v3 = load_workflow_dataset(root / "held_out" / "workflow-v3.json")
+    development_actions = load_action_dataset(root / "development" / "action-v1.json")
 
     assert len(development_retrieval.cases) == 3
     assert len(held_out_retrieval.cases) == 6
@@ -42,6 +44,8 @@ def test_frozen_evaluation_dataset_sizes_and_metadata() -> None:
     assert len(held_out_workflow_v3.cases) == 6
     assert held_out_workflow_v3.dataset_id == "workflow-held-out-v3"
     assert held_out_workflow_v3.dataset_version == "v3"
+    assert development_actions.dataset_id == "ticket-actions-development-v1"
+    assert len(development_actions.cases) == 4
 
 
 def test_held_out_manifest_matches_exact_frozen_dataset_bytes() -> None:
