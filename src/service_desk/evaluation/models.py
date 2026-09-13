@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from service_desk.ai.gateway import RouteName
+from service_desk.ai.gateway import RouteName, WriteIntent
 from service_desk.ticketing.models import ActionStatus
 
 
@@ -111,7 +111,7 @@ class ActionEvaluationCase(BaseModel):
     message: str = Field(min_length=1)
     expected_route: RouteName | Literal["clarification"]
     needs_clarification: bool
-    expected_write_intents: tuple[str, ...] = ()
+    expected_write_intents: tuple[WriteIntent, ...] = ()
     expected_workflow_tool: str | None = None
     expected_workflow_status: str | None = None
     decision: ActionDecision = "none"

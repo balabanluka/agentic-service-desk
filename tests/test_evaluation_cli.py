@@ -25,6 +25,10 @@ def test_live_cli_requires_explicit_confirmation_before_loading_settings(monkeyp
     with pytest.raises(SystemExit, match="confirm-live"):
         run.main()
 
+    monkeypatch.setattr(sys, "argv", ["evaluation", "action-live"])
+    with pytest.raises(SystemExit, match="confirm-live"):
+        run.main()
+
 
 def test_workflow_live_selection_allows_full_or_bounded_resume_runs() -> None:
     run._validate_workflow_live_selection(None, 1, 6)
@@ -51,3 +55,15 @@ def test_frozen_workflow_versions_are_available_only_for_the_held_out_split() ->
 def test_missing_workflow_version_is_rejected_clearly() -> None:
     with pytest.raises(SystemExit, match="does not exist"):
         run._workflow_dataset_path(Path("evaluation/datasets"), "held_out", "v999")
+
+
+def test_action_dataset_versions_have_separate_frozen_manifests() -> None:
+    root = Path("evaluation/datasets")
+
+    assert run._action_dataset_path(root, "held_out", "v2") == (
+        root / "held_out" / "action-v2.json"
+    )
+    run._verify_action_held_out_if_needed(root, "held_out", "v1")
+    run._verify_action_held_out_if_needed(root, "held_out", "v2")
+    with pytest.raises(SystemExit, match="no frozen manifest"):
+        run._verify_action_held_out_if_needed(root, "held_out", "v999")

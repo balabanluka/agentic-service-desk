@@ -26,5 +26,7 @@ jobs:
         run: python -m pip check
       - name: Validate frozen evaluation data
         run: python -m service_desk.evaluation.run validate
+      - name: Run offline V3 action evaluation
+        run: python -m service_desk.evaluation.run action-offline --split development
       - name: Build wheel
         run: python -m build --wheel
