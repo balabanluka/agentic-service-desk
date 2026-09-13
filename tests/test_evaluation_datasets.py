@@ -27,6 +27,7 @@ def test_frozen_evaluation_dataset_sizes_and_metadata() -> None:
     held_out_workflow_v2 = load_workflow_dataset(root / "held_out" / "workflow-v2.json")
     held_out_workflow_v3 = load_workflow_dataset(root / "held_out" / "workflow-v3.json")
     development_actions = load_action_dataset(root / "development" / "action-v1.json")
+    held_out_actions = load_action_dataset(root / "held_out" / "action-v1.json")
 
     assert len(development_retrieval.cases) == 3
     assert len(held_out_retrieval.cases) == 6
@@ -46,6 +47,8 @@ def test_frozen_evaluation_dataset_sizes_and_metadata() -> None:
     assert held_out_workflow_v3.dataset_version == "v3"
     assert development_actions.dataset_id == "ticket-actions-development-v1"
     assert len(development_actions.cases) == 4
+    assert held_out_actions.dataset_id == "ticket-actions-held-out-v1"
+    assert len(held_out_actions.cases) == 6
 
 
 def test_held_out_manifest_matches_exact_frozen_dataset_bytes() -> None:
@@ -81,6 +84,14 @@ def test_v3_manifest_freezes_only_the_new_workflow_dataset() -> None:
 
     assert manifests["manifest-v3.json"].files == {
         "workflow-v3.json": "5cdbe8f3e183db98ecc745a31ce88630578ed79846aab7a505fca62a09dd46f3"
+    }
+
+
+def test_v4_manifest_freezes_only_the_new_action_dataset() -> None:
+    manifests = verify_all_held_out_manifests(_datasets_root() / "held_out")
+
+    assert manifests["manifest-v4.json"].files == {
+        "action-v1.json": "a5f65d7dc786cf2ef7ffd40e7b7d4bc0545aede6ca4cfdfa7da3853211551c68"
     }
 
 
