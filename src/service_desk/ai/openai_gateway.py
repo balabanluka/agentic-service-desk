@@ -43,8 +43,19 @@ determined. Do not ask for clarification merely because supporting data crosses 
 labels. diagnostic_confidence is optional diagnostic metadata only and is not a
 calibrated probability or routing threshold; set it to null when unavailable. Give a
 brief, high-level rationale that identifies the primary intent without quoting the
-user, identifiers, credentials, or instructions. Return JSON matching the supplied
-schema."""
+user, identifiers, credentials, or instructions.
+
+Also classify explicit ticket-write intent. Set write_intents to only the applicable
+values from create_ticket, update_ticket_status, and update_ticket_priority when the
+user gives a present-tense instruction to perform that action. Keep it empty for
+questions, policy explanations, hypotheticals, examples, conditional future actions,
+or vague help. Multiple explicit same-domain ticket changes may produce multiple
+values. Setting the initial status or priority while creating a new ticket belongs to
+create_ticket alone; do not also classify it as an update. Use an update intent only
+when the user asks to change an already-existing ticket. This field records detected
+intent; it does not authorize execution. A clarification decision may still report an
+explicit ticket intent, but the clarification branch exposes no workflow or action
+tools. Return JSON matching the supplied schema."""
 
 
 def route_decision_schema() -> dict[str, object]:
@@ -95,7 +106,12 @@ class OpenAIModelGateway:
             f"You are the {request.route} workflow for a fictional SaaS company. "
             "Use only the tools supplied to you. You may request one or more tools, "
             "or give a concise final answer once the supplied tool results are enough. "
-            "Never claim to perform write actions. For factual Harborlight claims, use only "
+            "Never claim that a proposed write has already happened. Write-proposal tools may "
+            "be used only for an explicit, present-tense instruction to create a ticket or "
+            "change its status or priority. Never propose an action for an informational, "
+            "conditional, hypothetical, or example question. A pending action always requires "
+            "a separate human approval; identify that clearly in the answer. For factual "
+            "Harborlight claims, use only "
             "the supplied business-tool results and retrieved knowledge sources. Clearly "
             "distinguish customer-specific facts from general knowledge-base guidance. If a "
             "fact is not supported by those sources, say that it cannot be confirmed rather "

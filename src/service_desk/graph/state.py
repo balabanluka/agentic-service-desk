@@ -17,6 +17,14 @@ class KnowledgeSourceRecord(TypedDict):
     source_path: str
 
 
+class PendingActionRecord(TypedDict):
+    action_id: str
+    action_type: str
+    status: str
+    approval_required: bool
+    expires_at: str
+
+
 class AgentState(TypedDict):
     request_id: str
     customer_id: str
@@ -25,10 +33,12 @@ class AgentState(TypedDict):
     tool_calls: list[ToolCallRecord]
     tool_results: list[ToolResult]
     knowledge_sources: NotRequired[list[KnowledgeSourceRecord]]
+    pending_actions: NotRequired[list[PendingActionRecord]]
     selected_route: NotRequired[RouteName | str]
     needs_clarification: NotRequired[bool]
     route_rationale: NotRequired[str]
     diagnostic_confidence: NotRequired[float | None]
+    write_intents: NotRequired[list[str]]
     answer: NotRequired[str]
     answer_source: NotRequired[str]
     error_code: NotRequired[str]

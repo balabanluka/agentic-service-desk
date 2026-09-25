@@ -4,13 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-service-desk"
-version = "2.0.0"
+version = "3.0.0"
 description = "Controlled, grounded agentic AI service desk for a fictional SaaS company."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "anyio>=4.5,<5",
     "fastapi>=0.115,<1",
     "langgraph>=0.4,<2",
+    "mcp>=2,<3",
     "openai>=1.0,<3",
     "pgvector>=0.3,<1",
     "pydantic>=2.10,<3",
@@ -31,6 +33,7 @@ addopts = "-q"
 testpaths = ["tests"]
 markers = [
     "postgres: opt-in local PostgreSQL integration test; set RUN_POSTGRES_TESTS=1",
+    "mcp: opt-in MCP transport integration test; set RUN_MCP_TESTS=1",
 ]
 
 [tool.hatch.build.targets.wheel]

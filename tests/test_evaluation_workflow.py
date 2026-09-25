@@ -231,4 +231,5 @@ def test_evaluation_reports_safe_structured_router_decision() -> None:
         "needs_clarification": True,
         "diagnostic_confidence": 0.2,
         "rationale_summary": "The primary intent cannot be determined.",
+        "write_intents": [],
     }

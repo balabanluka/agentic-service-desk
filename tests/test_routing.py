@@ -29,3 +29,15 @@ def test_route_decision_does_not_apply_a_confidence_threshold() -> None:
     )
 
     assert decision.route == "technical"
+
+
+def test_clarification_may_report_but_does_not_authorize_write_intent() -> None:
+    decision = require_valid_route(
+        RouteDecision(
+            needs_clarification=True,
+            rationale="Independent outcomes need clarification.",
+            write_intents=("create_ticket",),
+        )
+    )
+
+    assert decision.write_intents == ("create_ticket",)

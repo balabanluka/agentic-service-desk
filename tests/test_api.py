@@ -41,7 +41,7 @@ def test_health_is_available_without_an_openai_key() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
-    assert app.version == "2.0.0"
+    assert app.version == "3.0.0"
 
 
 def test_chat_returns_answer_and_execution_metadata(client: TestClient) -> None:

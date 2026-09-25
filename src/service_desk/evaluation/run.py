@@ -12,24 +12,36 @@ from service_desk.config import Settings
 from service_desk.data.repository import BusinessRepository
 from service_desk.evaluation.datasets import (
     file_fingerprint,
+    load_action_dataset,
     load_retrieval_dataset,
     load_workflow_dataset,
     verify_all_held_out_manifests,
     verify_held_out_manifest,
 )
 from service_desk.evaluation.retrieval import evaluate_retrieval
+from service_desk.evaluation.actions import evaluate_actions, run_offline_action_evaluation
+from service_desk.evaluation.action_live import LiveActionEvaluationSession
 from service_desk.evaluation.workflow import evaluate_workflows, run_offline_workflow_evaluation
 from service_desk.graph.orchestrator import ServiceDeskGraph
 from service_desk.knowledge.embeddings import OpenAIEmbeddingClient
 from service_desk.knowledge.retrieval import DatabaseKnowledgeRetriever
 from service_desk.tools.business import BusinessTools
+from service_desk.ticketing.actions import ActionService
+from service_desk.ticketing.mcp import McpTicketGateway
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate V2 retrieval and grounded workflows.")
     parser.add_argument(
         "mode",
-        choices=("validate", "workflow-offline", "retrieval-live", "workflow-live"),
+        choices=(
+            "validate",
+            "workflow-offline",
+            "retrieval-live",
+            "workflow-live",
+            "action-offline",
+            "action-live",
+        ),
     )
     parser.add_argument("--split", choices=("development", "held_out"), default="development")
     parser.add_argument(
@@ -38,6 +50,7 @@ def main() -> None:
         help="Workflow dataset version, for example v1 or v3.",
     )
     parser.add_argument("--top-k", type=int, default=None)
+    parser.add_argument("--action-version", default="v1")
     parser.add_argument(
         "--limit",
         type=int,
@@ -67,6 +80,17 @@ def main() -> None:
             load_workflow_dataset(workflow_path),
             dataset_path_fingerprint=file_fingerprint(workflow_path),
         )
+    elif arguments.mode == "action-offline":
+        action_path = _action_dataset_path(
+            datasets_root, arguments.split, arguments.action_version
+        )
+        _verify_action_held_out_if_needed(
+            datasets_root, arguments.split, arguments.action_version
+        )
+        report = run_offline_action_evaluation(
+            load_action_dataset(action_path),
+            dataset_path_fingerprint=file_fingerprint(action_path),
+        )
     elif arguments.mode == "retrieval-live":
         _require_live_confirmation(arguments.confirm_live)
         retrieval_path = datasets_root / arguments.split / "retrieval-v1.json"
@@ -82,7 +106,7 @@ def main() -> None:
             top_k=top_k,
         )
         report["api_usage"] = "OpenAI embeddings were called once per retrieval case."
-    else:
+    elif arguments.mode == "workflow-live":
         _require_live_confirmation(arguments.confirm_live)
         workflow_path = _workflow_dataset_path(
             datasets_root, arguments.split, arguments.workflow_version
@@ -109,6 +133,57 @@ def main() -> None:
         )
         report["api_usage"] = (
             "OpenAI Responses and embeddings calls were made; answers require human review."
+        )
+    else:
+        _require_live_confirmation(arguments.confirm_live)
+        action_path = _action_dataset_path(
+            datasets_root, arguments.split, arguments.action_version
+        )
+        _verify_action_held_out_if_needed(
+            datasets_root, arguments.split, arguments.action_version
+        )
+        settings = _live_settings()
+        dataset = load_action_dataset(action_path)
+        _require_dataset_settings_match(
+            dataset.corpus_version,
+            dataset.chunking_version,
+            dataset.embedding_model,
+            settings,
+        )
+        database_url = settings.database_url.get_secret_value()  # type: ignore[union-attr]
+        ticket_gateway = McpTicketGateway(
+            settings.mcp_ticket_server_url,
+            timeout_seconds=settings.mcp_request_timeout_seconds,
+        )
+        action_service = ActionService(
+            database_url=database_url,
+            ticket_gateway=ticket_gateway,
+            ttl_minutes=settings.action_ttl_minutes,
+        )
+        graph = ServiceDeskGraph(
+            BusinessTools(BusinessRepository.from_default_seed(), ticket_gateway=ticket_gateway),
+            OpenAIModelGateway(
+                settings.openai_api_key.get_secret_value(), settings.openai_model  # type: ignore[union-attr]
+            ),
+            _live_retriever(settings),
+            action_service=action_service,
+        )
+        with LiveActionEvaluationSession(
+            dataset=dataset,
+            graph=graph,
+            action_service=action_service,
+            ticket_gateway=ticket_gateway,
+            database_url=database_url,
+        ) as session:
+            report = evaluate_actions(
+                dataset,
+                dataset_path_fingerprint=file_fingerprint(action_path),
+                observe_case=session.observe,
+                mode="live-action",
+            )
+        report["api_usage"] = (
+            "OpenAI Responses and embeddings calls were made; approved synthetic actions "
+            "were executed through MCP in isolated database fixtures."
         )
 
     _emit(report, arguments.output)
@@ -157,6 +232,26 @@ def _workflow_dataset_path(datasets_root: Path, split: str, workflow_version: st
     if not path.is_file():
         raise SystemExit(f"workflow dataset does not exist: {path.as_posix()}")
     return path
+
+
+def _action_dataset_path(datasets_root: Path, split: str, action_version: str) -> Path:
+    path = datasets_root / split / f"action-{action_version}.json"
+    if not path.is_file():
+        raise SystemExit(f"action dataset does not exist: {path.as_posix()}")
+    return path
+
+
+def _verify_action_held_out_if_needed(
+    datasets_root: Path, split: str, action_version: str
+) -> None:
+    if split == "held_out":
+        manifest_by_version = {"v1": "manifest-v4.json", "v2": "manifest-v5.json"}
+        if action_version not in manifest_by_version:
+            raise SystemExit(f"no frozen manifest is configured for action-{action_version}")
+        verify_held_out_manifest(
+            datasets_root / "held_out",
+            manifest_filename=manifest_by_version[action_version],
+        )
 
 
 def _live_settings() -> Settings:

@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     openai_embedding_dimensions: int = Field(default=1536, gt=0)
     knowledge_corpus_version: str = "kb-v1"
     knowledge_default_top_k: int = Field(default=4, ge=1, le=10)
+    mcp_ticket_server_url: str = "http://127.0.0.1:8001/mcp"
+    action_ttl_minutes: int = Field(default=30, ge=1, le=1440)
+    mcp_request_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

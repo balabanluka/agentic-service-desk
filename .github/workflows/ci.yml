@@ -11,8 +11,8 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -26,5 +26,7 @@ jobs:
         run: python -m pip check
       - name: Validate frozen evaluation data
         run: python -m service_desk.evaluation.run validate
+      - name: Run offline V3 action evaluation
+        run: python -m service_desk.evaluation.run action-offline --split development
       - name: Build wheel
         run: python -m build --wheel

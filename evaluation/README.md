@@ -1,20 +1,29 @@
-# V2 Evaluation Data
+# Evaluation data and integrity
 
-This directory contains original synthetic evaluation data for the frozen
-Harborlight Workspace knowledge corpus. Development datasets may guide implementation
-work. Held-out datasets are frozen benchmarks: do not change their cases after
-observing their results. `workflow-v1.json` remains the historical pre-fix
-benchmark; `workflow-v2.json` is the first separately frozen post-fix workflow
-set, and `workflow-v3.json` is the unseen set frozen after the general
-primary-intent routing correction. Every observed version remains immutable.
-The manifests record SHA-256 fingerprints of normalized UTF-8 held-out JSON
-content and are verified by the evaluation CLI.
+This directory contains original synthetic development and frozen held-out datasets
+for Harborlight Workspace.
 
-The datasets evaluate retrieval ranking and deterministic workflow contracts.
-They do not claim that string matching can prove answer-level factual accuracy.
-The explicit live workflow mode records answers for human review; it is never run
-by pytest and requires a manual confirmation flag because it uses OpenAI APIs.
+- Retrieval datasets measure exact pgvector ranking.
+- Workflow datasets measure V2 routing, tools, grounding, clarification, and safety.
+- Action datasets measure V3 write intent, proposal gating, pre-approval
+  non-mutation, approval/rejection, exactly-once receipts, ownership, and audit.
 
-Generated reports belong in `evaluation/reports/`, which is intentionally ignored.
-The deliberately sanitized, source-controlled V2 history is in
-`evaluation/results/v2-benchmark-summary.json`.
+Development data may guide implementation. Held-out files are frozen by normalized
+UTF-8 SHA-256 fingerprints before their first live run. Observed datasets and first
+reports are never rewritten to improve scores. A product fix motivated by an observed
+set requires a new unseen version.
+
+Historical V2 workflow v1/v2/v3 and retrieval v1 remain unchanged. V3 action v1 is
+the historical pre-fix run; action v2 is the final unseen post-fix set. Untracked local
+development reports stay ignored. Intentionally tracked held-out reports and summaries
+contain only synthetic, sanitized data.
+
+Offline commands never call OpenAI:
+
+```bash
+python -m service_desk.evaluation.run validate
+python -m service_desk.evaluation.run action-offline --split held_out --action-version v2
+```
+
+Live modes require `--confirm-live`, OpenAI, PostgreSQL, and the ticket MCP service.
+Action fixtures are isolated and cleaned by exact identities.

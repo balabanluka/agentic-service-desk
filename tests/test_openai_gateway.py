@@ -128,3 +128,10 @@ def test_router_contract_covers_cross_domain_supporting_metadata_examples() -> N
     assert "export troubleshooting remains technical" in normalized
     assert 'role name contains "billing"' in normalized
     assert "password-reset delivery remains support" in normalized
+
+
+def test_router_contract_separates_new_ticket_attributes_from_later_updates() -> None:
+    normalized = " ".join(ROUTER_INSTRUCTIONS.lower().split())
+
+    assert "belongs to create_ticket alone" in normalized
+    assert "already-existing ticket" in normalized

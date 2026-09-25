@@ -35,3 +35,18 @@ def test_embedding_dimension_must_match_the_current_vector_schema(monkeypatch) -
 
     with pytest.raises(ValueError, match="must be 1536"):
         Settings(_env_file=None)
+
+
+def test_v3_action_settings_have_local_bounded_defaults(monkeypatch) -> None:
+    for name in (
+        "MCP_TICKET_SERVER_URL",
+        "MCP_REQUEST_TIMEOUT_SECONDS",
+        "ACTION_TTL_MINUTES",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert settings.mcp_ticket_server_url == "http://127.0.0.1:8001/mcp"
+    assert settings.mcp_request_timeout_seconds == 10
+    assert settings.action_ttl_minutes == 30
